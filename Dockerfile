@@ -9,5 +9,5 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 
-ENTRYPOINT ["pnpm", "evalgate"]
+ENTRYPOINT ["pnpm", "ezeval"]
 CMD []

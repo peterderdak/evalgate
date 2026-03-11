@@ -1,16 +1,16 @@
-# EvalGate
+# ezEval
 
-EvalGate is a CLI for regression-testing structured AI features before release.
+ezEval is a CLI for regression-testing structured AI features before release.
 
 It answers one question:
 
 **Is this prompt or model change still safe to ship?**
 
-EvalGate runs a saved dataset against a model, validates the output against a JSON schema, computes deterministic metrics, and writes a `report.json` artifact with a pass/fail gate.
+ezEval runs a saved dataset against a model, validates the output against a JSON schema, computes deterministic metrics, and writes a `report.json` artifact with a pass/fail gate.
 
 ## Best Fit
 
-EvalGate is most useful when your AI feature must return predictable JSON.
+ezEval is most useful when your AI feature must return predictable JSON.
 
 Good fits:
 
@@ -34,7 +34,7 @@ Most teams still test prompt changes manually:
 - they do not have a consistent pass/fail bar
 - release decisions become opinion-driven
 
-EvalGate turns that into a repeatable release gate:
+ezEval turns that into a repeatable release gate:
 
 - same dataset every run
 - same schema contract every run
@@ -43,7 +43,7 @@ EvalGate turns that into a repeatable release gate:
 
 ## Metrics
 
-EvalGate currently computes:
+ezEval currently computes:
 
 - `schema_valid_rate`
 - `enum_accuracy`
@@ -53,8 +53,8 @@ EvalGate currently computes:
 ## End-to-End Workflow
 
 1. Create a JSONL dataset of representative inputs and expected outputs.
-2. Define the prompt, provider, schema, and thresholds in an EvalGate config.
-3. Run `evalgate run`.
+2. Define the prompt, provider, schema, and thresholds in an ezEval config.
+3. Run `ezeval run`.
 4. Review `report.json`.
 5. Use `--fail-on-gate` in CI to block risky changes.
 
@@ -70,21 +70,21 @@ pnpm install
 ### 2. Create a starter config
 
 ```bash
-pnpm evalgate:init
+pnpm ezeval:init
 ```
 
-This creates `evalgate.config.json` in the repo root.
+This creates `ezeval.config.json` in the repo root.
 
 ### 3. Run the sample use case
 
 ```bash
-pnpm eval:sample
+pnpm ezeval:sample
 ```
 
 This uses:
 
 - [examples/ticket-triage/dataset.jsonl](/Users/peterderdak/Documents/Playground/examples/ticket-triage/dataset.jsonl)
-- [examples/ticket-triage/config.evalgate.json](/Users/peterderdak/Documents/Playground/examples/ticket-triage/config.evalgate.json)
+- [examples/ticket-triage/config.ezeval.json](/Users/peterderdak/Documents/Playground/examples/ticket-triage/config.ezeval.json)
 
 The output is written to:
 
@@ -95,15 +95,15 @@ The output is written to:
 ```bash
 export OPENAI_API_KEY=your_key_here
 
-pnpm eval:sample:openai
+pnpm ezeval:sample:openai
 ```
 
 ### 5. Fail CI when the gate fails
 
 ```bash
-pnpm evalgate run \
+pnpm ezeval run \
   --dataset ./examples/ticket-triage/dataset.jsonl \
-  --config ./examples/ticket-triage/config.evalgate.json \
+  --config ./examples/ticket-triage/config.ezeval.json \
   --provider openai \
   --model gpt-4.1-mini \
   --fail-on-gate
@@ -128,8 +128,8 @@ This example evaluates a support-ticket classifier that must return one category
 The repo also includes a public demo flow with one passing run and one intentionally failing run.
 
 - narrative and recording guide: [docs/demo.md](/Users/peterderdak/Documents/Playground/docs/demo.md)
-- passing gate config: [examples/ticket-triage/demo-pass.evalgate.json](/Users/peterderdak/Documents/Playground/examples/ticket-triage/demo-pass.evalgate.json)
-- failing gate config: [examples/ticket-triage/demo-fail.evalgate.json](/Users/peterderdak/Documents/Playground/examples/ticket-triage/demo-fail.evalgate.json)
+- passing gate config: [examples/ticket-triage/demo-pass.ezeval.json](/Users/peterderdak/Documents/Playground/examples/ticket-triage/demo-pass.ezeval.json)
+- failing gate config: [examples/ticket-triage/demo-fail.ezeval.json](/Users/peterderdak/Documents/Playground/examples/ticket-triage/demo-fail.ezeval.json)
 
 Run the pass demo:
 
@@ -145,7 +145,7 @@ pnpm demo:fail
 
 ## Dataset Format
 
-EvalGate accepts JSONL only.
+ezEval accepts JSONL only.
 
 Each line must contain:
 
@@ -165,7 +165,7 @@ Example:
 
 Example:
 
-- [examples/ticket-triage/config.evalgate.json](/Users/peterderdak/Documents/Playground/examples/ticket-triage/config.evalgate.json)
+- [examples/ticket-triage/config.ezeval.json](/Users/peterderdak/Documents/Playground/examples/ticket-triage/config.ezeval.json)
 
 ```json
 {
@@ -198,30 +198,30 @@ Example:
 Create a starter config:
 
 ```bash
-pnpm evalgate:init
+pnpm ezeval:init
 ```
 
 Run an eval:
 
 ```bash
-pnpm evalgate run --dataset ./my-dataset.jsonl --config ./evalgate.config.json
+pnpm ezeval run --dataset ./my-dataset.jsonl --config ./ezeval.config.json
 ```
 
 Write the report to a custom path:
 
 ```bash
-pnpm evalgate run \
+pnpm ezeval run \
   --dataset ./my-dataset.jsonl \
-  --config ./evalgate.config.json \
+  --config ./ezeval.config.json \
   --out ./reports/report.json
 ```
 
 Override provider or model:
 
 ```bash
-pnpm evalgate run \
+pnpm ezeval run \
   --dataset ./my-dataset.jsonl \
-  --config ./evalgate.config.json \
+  --config ./ezeval.config.json \
   --provider openai \
   --model gpt-4.1-mini
 ```
@@ -254,8 +254,8 @@ For real provider runs, the main variable is:
 ## Docker
 
 ```bash
-docker build -t evalgate .
-docker run --rm -v "$PWD:/workspace" -w /workspace evalgate run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.evalgate.json
+docker build -t ezeval .
+docker run --rm -v "$PWD:/workspace" -w /workspace ezeval run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.ezeval.json
 ```
 
 ## Validation
@@ -263,7 +263,7 @@ docker run --rm -v "$PWD:/workspace" -w /workspace evalgate run --dataset ./exam
 ```bash
 pnpm test
 pnpm build
-pnpm eval:sample
+pnpm ezeval:sample
 pnpm demo:pass
 pnpm demo:fail
 ```
