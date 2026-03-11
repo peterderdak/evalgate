@@ -1,6 +1,7 @@
 import "./globals.css";
 
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "EvalGate",
@@ -14,7 +15,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="grid-fade min-h-screen">
           <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-10 sm:px-6 lg:px-8">
             <header className="mb-10 flex flex-col gap-4 border-b border-ink/10 pb-8">
-              <p className="font-display text-sm uppercase tracking-[0.3em] text-forest/70">EvalGate</p>
+              <div className="flex items-center justify-between gap-4">
+                <Link className="font-display text-sm uppercase tracking-[0.3em] text-forest/70" href="/">
+                  EvalGate
+                </Link>
+                <p className="rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs uppercase tracking-[0.2em] text-ink/55">
+                  Next.js + Supabase + Worker
+                </p>
+              </div>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div className="max-w-3xl">
                   <h1 className="font-display text-4xl font-bold sm:text-6xl">Evaluation gates for production prompts.</h1>
