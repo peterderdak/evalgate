@@ -98,6 +98,10 @@ export async function getCaseResults(...args: Parameters<typeof local.getCaseRes
   return useRemoteStore() ? remote.getCaseResults(...args) : local.getCaseResults(...args);
 }
 
+export async function clearRunArtifacts(...args: Parameters<typeof local.clearRunArtifacts>) {
+  return useRemoteStore() ? remote.clearRunArtifacts(...args) : local.clearRunArtifacts(...args);
+}
+
 export async function getCiTokenByHash(...args: Parameters<typeof local.getCiTokenByHash>) {
   return useRemoteStore() ? remote.getCiTokenByHash(...args) : local.getCiTokenByHash(...args);
 }

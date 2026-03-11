@@ -4,6 +4,7 @@ import type { CaseResult, RunSummaryResponse } from "@evalgate/shared";
 
 import {
   appendCaseResult,
+  clearRunArtifacts,
   completeJob,
   createFailures,
   getDataset,
@@ -19,6 +20,51 @@ import {
 } from "./database";
 import { createId } from "./ids";
 import { decryptJobSecret } from "./job-secrets";
+
+function getProviderTimeoutMs() {
+  return Math.max(Number(process.env.EVALGATE_PROVIDER_TIMEOUT_MS ?? 30000), 1);
+}
+
+function getProviderMaxRetries() {
+  return Math.max(Number(process.env.EVALGATE_PROVIDER_MAX_RETRIES ?? 2), 0);
+}
+
+function getJobLeaseTimeoutMs() {
+  return Math.max(Number(process.env.EVALGATE_JOB_LEASE_TIMEOUT_MS ?? 120000), 0);
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isRetryableRunError(error: unknown) {
+  const message = getErrorMessage(error).toLowerCase();
+  return !(
+    message.includes("run not found") ||
+    message.includes("run job not found") ||
+    message.includes("missing dataset or run config") ||
+    message.includes("no provider api key available") ||
+    message.includes("unsupported model provider") ||
+    message.includes("no evaluation cases supplied") ||
+    message.includes("dataset is empty") ||
+    message.includes("dataset exceeds") ||
+    message.includes("dataset line")
+  );
+}
+
+async function markRunForRetryOrFailure(runId: string, jobId: string, error: unknown) {
+  const message = getErrorMessage(error);
+  const job = await failJob(jobId, message, { retryable: isRetryableRunError(error) });
+
+  await updateRun(runId, {
+    status: job?.status === "pending" ? "queued" : "failed",
+    startedAt: undefined,
+    completedAt: job?.status === "pending" ? undefined : new Date().toISOString(),
+    errorMessage: message
+  });
+
+  return job;
+}
 
 export async function processRun(runId: string) {
   const run = await getRun(runId);
@@ -36,10 +82,31 @@ export async function processRun(runId: string) {
     throw new Error("Run job not found");
   }
 
+  const existingReport = await getRunReport(run.id);
+  if (run.status === "completed" && existingReport) {
+    return {
+      metrics: existingReport.report.metrics,
+      pass: existingReport.report.pass,
+      failures: [],
+      report: existingReport.report,
+      gate: {
+        pass: existingReport.report.pass,
+        reasons: existingReport.report.gate_reasons
+      },
+      caseResults: [],
+      reportPath: existingReport.reportPath
+    };
+  }
+
+  await clearRunArtifacts(run.id);
+
   await updateRun(run.id, {
     status: "running",
     startedAt: new Date().toISOString(),
-    totalCases: dataset.rowCount
+    completedAt: undefined,
+    processedCases: 0,
+    totalCases: dataset.rowCount,
+    errorMessage: undefined
   });
 
   const datasetText = await readDatasetFile(dataset.storagePath);
@@ -60,6 +127,8 @@ export async function processRun(runId: string) {
     projectId: run.projectId,
     cases: parseDatasetText(datasetText),
     apiKey,
+    providerTimeoutMs: getProviderTimeoutMs(),
+    providerMaxRetries: getProviderMaxRetries(),
     runConfig,
     onCaseProcessed: async (caseResult) => {
       const caseRow: CaseResult = {
@@ -118,7 +187,7 @@ export async function processRun(runId: string) {
 }
 
 export async function processNextPendingJob(leaseOwner: string) {
-  const job = await leaseNextJob(leaseOwner);
+  const job = await leaseNextJob(leaseOwner, getJobLeaseTimeoutMs());
   if (!job) {
     return null;
   }
@@ -128,12 +197,7 @@ export async function processNextPendingJob(leaseOwner: string) {
     await completeJob(job.id);
     return job;
   } catch (error) {
-    await updateRun(job.runId, {
-      status: "failed",
-      completedAt: new Date().toISOString(),
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
-    await failJob(job.id, error instanceof Error ? error.message : String(error));
+    await markRunForRetryOrFailure(job.runId, job.id, error);
     throw error;
   }
 }
@@ -145,13 +209,14 @@ export async function maybeRunInline(runId: string) {
   setTimeout(() => {
     void processRun(runId).catch(async (error) => {
       const job = await getJobByRunId(runId);
-      await updateRun(runId, {
-        status: "failed",
-        completedAt: new Date().toISOString(),
-        errorMessage: error instanceof Error ? error.message : String(error)
-      });
       if (job) {
-        await failJob(job.id, error instanceof Error ? error.message : String(error));
+        await markRunForRetryOrFailure(runId, job.id, error);
+      } else {
+        await updateRun(runId, {
+          status: "failed",
+          completedAt: new Date().toISOString(),
+          errorMessage: getErrorMessage(error)
+        });
       }
     });
   }, 0);

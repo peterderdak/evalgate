@@ -38,8 +38,8 @@ function generateCiToken() {
   return `egt_${randomBytes(24).toString("hex")}`;
 }
 
-function stripUndefined<T extends Record<string, unknown>>(value: T) {
-  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined));
+function retryDelayMs(attempts: number) {
+  return Math.min(30000, 1000 * 2 ** Math.max(attempts - 1, 0));
 }
 
 function mapProject(row: {
@@ -525,17 +525,18 @@ export async function getRun(runId: string) {
 
 export async function updateRun(runId: string, patch: Partial<Run>) {
   const supabase = getSupabase();
+  const update = {
+    ...("status" in patch ? { status: patch.status } : {}),
+    ...("startedAt" in patch ? { started_at: patch.startedAt ?? null } : {}),
+    ...("completedAt" in patch ? { completed_at: patch.completedAt ?? null } : {}),
+    ...("totalCases" in patch ? { total_cases: patch.totalCases ?? null } : {}),
+    ...("processedCases" in patch ? { processed_cases: patch.processedCases } : {}),
+    ...("costEstimateUsd" in patch ? { cost_estimate_usd: patch.costEstimateUsd ?? null } : {}),
+    ...("errorMessage" in patch ? { error_message: patch.errorMessage ?? null } : {})
+  };
   const { data, error } = await supabase
     .from("runs")
-    .update(stripUndefined({
-      status: patch.status,
-      started_at: patch.startedAt,
-      completed_at: patch.completedAt,
-      total_cases: patch.totalCases,
-      processed_cases: patch.processedCases,
-      cost_estimate_usd: patch.costEstimateUsd,
-      error_message: patch.errorMessage
-    }))
+    .update(update)
     .eq("id", runId)
     .select("id, project_id, dataset_id, run_config_id, trigger_source, status, started_at, completed_at, total_cases, processed_cases, cost_estimate_usd, error_message, created_at")
     .single();
@@ -653,6 +654,33 @@ export async function getCaseResults(runId: string) {
   return (data ?? []).map(mapCaseResult);
 }
 
+export async function clearRunArtifacts(runId: string) {
+  const supabase = getSupabase();
+  const report = await getRunReport(runId);
+
+  const { error: caseResultsError } = await supabase.from("case_results").delete().eq("run_id", runId);
+  if (caseResultsError) {
+    throw new Error(caseResultsError.message);
+  }
+
+  const { error: failuresError } = await supabase.from("failures").delete().eq("run_id", runId);
+  if (failuresError) {
+    throw new Error(failuresError.message);
+  }
+
+  const { error: runResultsError } = await supabase.from("run_results").delete().eq("run_id", runId);
+  if (runResultsError) {
+    throw new Error(runResultsError.message);
+  }
+
+  if (report?.reportPath) {
+    const { error: storageError } = await supabase.storage.from(getBuckets().reports).remove([report.reportPath]);
+    if (storageError) {
+      throw new Error(storageError.message);
+    }
+  }
+}
+
 export async function getCiTokenByHash(projectId: string, tokenHash: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -731,9 +759,37 @@ export async function getJobByRunId(runId: string) {
   return data ? mapJob(data) : null;
 }
 
-export async function leaseNextJob(leaseOwner: string) {
+export async function leaseNextJob(leaseOwner: string, leaseTimeoutMs: number) {
   const supabase = getSupabase();
   const now = new Date().toISOString();
+  const expiredBefore = new Date(Date.now() - Math.max(leaseTimeoutMs, 0)).toISOString();
+
+  const { data: expiredJobs, error: expiredError } = await supabase
+    .from("jobs")
+    .select("id, attempts, max_attempts")
+    .eq("status", "leased")
+    .lte("leased_at", expiredBefore);
+  if (expiredError) {
+    throw new Error(expiredError.message);
+  }
+
+  for (const expired of expiredJobs ?? []) {
+    const { error: reclaimError } = await supabase
+      .from("jobs")
+      .update({
+        status: expired.attempts >= expired.max_attempts ? "failed" : "pending",
+        available_at: now,
+        error_message: "Lease expired",
+        leased_at: null,
+        lease_owner: null
+      })
+      .eq("id", expired.id)
+      .eq("status", "leased");
+    if (reclaimError) {
+      throw new Error(reclaimError.message);
+    }
+  }
+
   const { data: candidates, error } = await supabase
     .from("jobs")
     .select("id, type, run_id, status, attempts, max_attempts, available_at, leased_at, lease_owner, error_message, payload_json, created_at")
@@ -769,32 +825,42 @@ export async function leaseNextJob(leaseOwner: string) {
 
 export async function completeJob(jobId: string) {
   const supabase = getSupabase();
-  const { error } = await supabase.from("jobs").update({ status: "completed" }).eq("id", jobId);
+  const { error } = await supabase
+    .from("jobs")
+    .update({ status: "completed", leased_at: null, lease_owner: null, error_message: null })
+    .eq("id", jobId);
   if (error) {
     throw new Error(error.message);
   }
 }
 
-export async function failJob(jobId: string, message: string) {
+export async function failJob(jobId: string, message: string, options?: { retryable?: boolean }) {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("jobs")
-    .select("attempts, max_attempts")
+    .select("id, type, run_id, status, attempts, max_attempts, available_at, leased_at, lease_owner, error_message, payload_json, created_at")
     .eq("id", jobId)
     .single();
   if (error) {
     throw new Error(error.message);
   }
-  const shouldFailPermanently = data.attempts >= data.max_attempts;
-  const { error: updateError } = await supabase
+
+  const shouldRetry = options?.retryable !== false && data.attempts < data.max_attempts;
+  const { data: updated, error: updateError } = await supabase
     .from("jobs")
     .update({
-      status: shouldFailPermanently ? "failed" : "pending",
-      available_at: new Date(Date.now() + 1000 * Math.max(data.attempts, 1)).toISOString(),
-      error_message: message
+      status: shouldRetry ? "pending" : "failed",
+      available_at: new Date(Date.now() + retryDelayMs(data.attempts)).toISOString(),
+      error_message: message,
+      leased_at: null,
+      lease_owner: null
     })
-    .eq("id", jobId);
+    .eq("id", jobId)
+    .select("id, type, run_id, status, attempts, max_attempts, available_at, leased_at, lease_owner, error_message, payload_json, created_at")
+    .single();
   if (updateError) {
     throw new Error(updateError.message);
   }
+
+  return mapJob(updated);
 }

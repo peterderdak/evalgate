@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { Project } from "@evalgate/shared";
 
 import { createProject, getProjects } from "../lib/api-client";
+import { useAuth } from "./auth-provider";
 import { cardClass, formatDate, SectionIntro } from "./project-shell";
 
 const templateOptions = [
@@ -17,6 +18,7 @@ const templateOptions = [
 
 export function ProjectsHome() {
   const router = useRouter();
+  const { authRequired, loading: authLoading, user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -27,6 +29,16 @@ export function ProjectsHome() {
   const [templateType, setTemplateType] = useState("ticket_triage_classifier");
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (authRequired && !user) {
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function load() {
@@ -52,10 +64,15 @@ export function ProjectsHome() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authLoading, authRequired, user]);
 
   async function handleCreateProject(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (authRequired && !user) {
+      router.push("/sign-in");
+      return;
+    }
+
     setCreating(true);
     setError(null);
     setStatus(null);
@@ -75,64 +92,90 @@ export function ProjectsHome() {
     }
   }
 
+  if (authLoading) {
+    return <p className="text-sm text-ink/60">Checking session...</p>;
+  }
+
   return (
     <main className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
       <section className="grid gap-6">
-        <div className={cardClass}>
-          <SectionIntro
-            eyebrow="Create Project"
-            title="Start an evaluation workspace"
-            description="Define the project shell first, then attach datasets, run configs, and CI gates inside the project workspace."
-          />
+        {authRequired && !user ? (
+          <div className={cardClass}>
+            <SectionIntro
+              eyebrow="Sign In"
+              title="Use Supabase Auth to enter EvalGate"
+              description="Project creation, datasets, runs, and reports are now scoped to the signed-in user."
+            />
 
-          <form className="mt-6 grid gap-4" onSubmit={handleCreateProject}>
-            <label className="grid gap-2 text-sm font-medium text-ink">
-              Project name
-              <input
-                className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
-                onChange={(event) => setProjectName(event.target.value)}
-                placeholder="Support Ticket Classifier"
-                value={projectName}
-              />
-            </label>
-
-            <label className="grid gap-2 text-sm font-medium text-ink">
-              Description
-              <textarea
-                className="min-h-28 rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Describe the prompt or model behavior being evaluated"
-                value={description}
-              />
-            </label>
-
-            <label className="grid gap-2 text-sm font-medium text-ink">
-              Template type
-              <select
-                className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
-                onChange={(event) => setTemplateType(event.target.value)}
-                value={templateType}
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <Link
+                className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-forest"
+                href="/sign-in"
               >
-                {templateOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                Go to sign in
+              </Link>
+              <p className="text-sm text-ink/65">
+                After sign-in, this page will load your projects and let you create new workspaces.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className={cardClass}>
+            <SectionIntro
+              eyebrow="Create Project"
+              title="Start an evaluation workspace"
+              description="Define the project shell first, then attach datasets, run configs, and CI gates inside the project workspace."
+            />
 
-            <button
-              className="w-fit rounded-full bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-forest disabled:opacity-60"
-              disabled={creating}
-              type="submit"
-            >
-              {creating ? "Creating..." : "Create project"}
-            </button>
+            <form className="mt-6 grid gap-4" onSubmit={handleCreateProject}>
+              <label className="grid gap-2 text-sm font-medium text-ink">
+                Project name
+                <input
+                  className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
+                  onChange={(event) => setProjectName(event.target.value)}
+                  placeholder="Support Ticket Classifier"
+                  value={projectName}
+                />
+              </label>
 
-            {status ? <p className="text-sm text-forest">{status}</p> : null}
-            {error ? <p className="text-sm text-red-700">{error}</p> : null}
-          </form>
-        </div>
+              <label className="grid gap-2 text-sm font-medium text-ink">
+                Description
+                <textarea
+                  className="min-h-28 rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Describe the prompt or model behavior being evaluated"
+                  value={description}
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-ink">
+                Template type
+                <select
+                  className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
+                  onChange={(event) => setTemplateType(event.target.value)}
+                  value={templateType}
+                >
+                  {templateOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                className="w-fit rounded-full bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-forest disabled:opacity-60"
+                disabled={creating}
+                type="submit"
+              >
+                {creating ? "Creating..." : "Create project"}
+              </button>
+
+              {status ? <p className="text-sm text-forest">{status}</p> : null}
+              {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            </form>
+          </div>
+        )}
 
         <div className={[cardClass, "bg-mist/55"].join(" ")}>
           <SectionIntro
@@ -160,7 +203,9 @@ export function ProjectsHome() {
             <p className="mt-6 text-sm text-ink/60">Loading projects...</p>
           ) : projects.length === 0 ? (
             <div className="mt-6 rounded-3xl border border-dashed border-ink/15 bg-sand/70 p-6 text-sm text-ink/65">
-              No projects yet. Create one from the panel on the left to enter the workspace flow.
+              {authRequired && !user
+                ? "Sign in first, then your project workspaces will appear here."
+                : "No projects yet. Create one from the panel on the left to enter the workspace flow."}
             </div>
           ) : (
             <div className="mt-6 grid gap-4">

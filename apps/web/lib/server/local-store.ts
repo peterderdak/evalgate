@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type {
@@ -34,7 +34,9 @@ function findWorkspaceRoot(startDir: string) {
   }
 }
 
-const DATA_DIR = path.join(findWorkspaceRoot(process.cwd()), ".data");
+const DATA_DIR = process.env.EVALGATE_DATA_DIR
+  ? path.resolve(process.env.EVALGATE_DATA_DIR)
+  : path.join(findWorkspaceRoot(process.cwd()), ".data");
 const DB_PATH = path.join(DATA_DIR, "db.json");
 const STORAGE_DIR = path.join(DATA_DIR, "storage");
 
@@ -89,6 +91,10 @@ function sha256(text: string) {
 
 function generateCiToken() {
   return `egt_${randomBytes(24).toString("hex")}`;
+}
+
+function retryDelayMs(attempts: number) {
+  return Math.min(30000, 1000 * 2 ** Math.max(attempts - 1, 0));
 }
 
 export async function saveDatasetFile(storagePath: string, contents: string) {
@@ -292,6 +298,19 @@ export async function getCaseResults(runId: string) {
   return db.caseResults.filter((result) => result.runId === runId);
 }
 
+export async function clearRunArtifacts(runId: string) {
+  const db = await ensureDb();
+  const report = db.runReports.find((row) => row.runId === runId) ?? null;
+  db.caseResults = db.caseResults.filter((result) => result.runId !== runId);
+  db.failures = db.failures.filter((failure) => failure.runId !== runId);
+  db.runReports = db.runReports.filter((row) => row.runId !== runId);
+  await persistDb(db);
+
+  if (report) {
+    await rm(path.join(STORAGE_DIR, report.reportPath), { force: true });
+  }
+}
+
 export async function getCiTokenByHash(projectId: string, tokenHash: string) {
   const db = await ensureDb();
   return db.ciTokens.find((token) => token.projectId === projectId && token.tokenHash === tokenHash) ?? null;
@@ -333,11 +352,26 @@ export async function getJobByRunId(runId: string) {
   return db.jobs.find((job) => job.runId === runId) ?? null;
 }
 
-export async function leaseNextJob(leaseOwner: string) {
+export async function leaseNextJob(leaseOwner: string, leaseTimeoutMs: number) {
   const db = await ensureDb();
   const now = new Date().toISOString();
+  const expiredBefore = new Date(Date.now() - Math.max(leaseTimeoutMs, 0)).toISOString();
+
+  for (const candidate of db.jobs) {
+    if (candidate.status !== "leased" || !candidate.leasedAt || candidate.leasedAt > expiredBefore) {
+      continue;
+    }
+
+    candidate.status = candidate.attempts >= candidate.maxAttempts ? "failed" : "pending";
+    candidate.availableAt = now;
+    candidate.errorMessage = candidate.errorMessage ?? "Lease expired";
+    candidate.leasedAt = undefined;
+    candidate.leaseOwner = undefined;
+  }
+
   const job = db.jobs.find((candidate) => candidate.status === "pending" && candidate.availableAt <= now);
   if (!job) {
+    await persistDb(db);
     return null;
   }
   job.status = "leased";
@@ -352,20 +386,28 @@ export async function completeJob(jobId: string) {
   const db = await ensureDb();
   const job = db.jobs.find((candidate) => candidate.id === jobId);
   if (!job) {
-    return;
+    return null;
   }
   job.status = "completed";
+  job.leasedAt = undefined;
+  job.leaseOwner = undefined;
+  job.errorMessage = undefined;
   await persistDb(db);
+  return job;
 }
 
-export async function failJob(jobId: string, message: string) {
+export async function failJob(jobId: string, message: string, options?: { retryable?: boolean }) {
   const db = await ensureDb();
   const job = db.jobs.find((candidate) => candidate.id === jobId);
   if (!job) {
-    return;
+    return null;
   }
-  job.status = job.attempts >= job.maxAttempts ? "failed" : "pending";
-  job.availableAt = new Date(Date.now() + 1000 * Math.max(job.attempts, 1)).toISOString();
+  const shouldRetry = options?.retryable !== false && job.attempts < job.maxAttempts;
+  job.status = shouldRetry ? "pending" : "failed";
+  job.availableAt = new Date(Date.now() + retryDelayMs(job.attempts)).toISOString();
   job.errorMessage = message;
+  job.leasedAt = undefined;
+  job.leaseOwner = undefined;
   await persistDb(db);
+  return job;
 }

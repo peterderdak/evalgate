@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { FailureRecord, RunReport } from "@evalgate/shared";
+import type { EvalCase, FailureRecord, RunReport } from "@evalgate/shared";
 
 import { enumAccuracy } from "./metrics/enum-accuracy.js";
 import { fieldLevelAccuracy } from "./metrics/field-level-accuracy.js";
@@ -13,6 +13,16 @@ import { evaluateGate } from "./reporter.js";
 import type { EvaluationCaseResult, RunEvaluationInput, RunEvaluationOutput } from "./types.js";
 import { loadDataset } from "./validators/dataset.js";
 import { validateSchemaOutput } from "./validators/schema.js";
+
+const DEFAULT_PROVIDER_TIMEOUT_MS = 30000;
+const DEFAULT_PROVIDER_MAX_RETRIES = 2;
+
+class ProviderTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProviderTimeoutError";
+  }
+}
 
 function buildDiff(expected: Record<string, unknown>, actual: Record<string, unknown> | null) {
   const { expectedFlat, actualFlat } = compareFields(expected, actual);
@@ -58,6 +68,111 @@ function detectFailureType(input: {
   return null;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function retryDelayMs(attempt: number) {
+  return Math.min(2000, 250 * 2 ** Math.max(attempt - 1, 0));
+}
+
+function isAbortError(error: unknown) {
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError")
+  );
+}
+
+function classifyProviderFailure(error: unknown): FailureRecord["failureType"] {
+  const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof ProviderTimeoutError || isAbortError(error) || message.toLowerCase().includes("timeout")) {
+    return "timeout";
+  }
+  return "provider_error";
+}
+
+async function invokeWithTimeout(
+  provider: ReturnType<typeof getModelProvider>,
+  input: RunEvaluationInput,
+  testcase: EvalCase
+) {
+  const timeoutMs = Math.max(input.providerTimeoutMs ?? DEFAULT_PROVIDER_TIMEOUT_MS, 1);
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        controller.abort();
+        reject(new ProviderTimeoutError(`Provider timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
+    return await Promise.race([
+      provider.invokeStructured({
+        apiKey: input.apiKey,
+        model: input.runConfig.modelName,
+        prompt: input.runConfig.promptText,
+        input: testcase.input,
+        schema: input.runConfig.schema,
+        signal: controller.signal
+      }),
+      timeoutPromise
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
+async function invokeCase(
+  provider: ReturnType<typeof getModelProvider>,
+  input: RunEvaluationInput,
+  testcase: EvalCase
+) {
+  const retryOnParseFailure = input.retryOnParseFailure ?? true;
+  const maxAttempts = Math.max(input.providerMaxRetries ?? DEFAULT_PROVIDER_MAX_RETRIES, 0) + 1;
+  const caseStartedAt = Date.now();
+  let rawText = "";
+  let actual: Record<string, unknown> | null = null;
+  let providerFailureType: FailureRecord["failureType"] | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const result = await invokeWithTimeout(provider, input, testcase);
+      rawText = result.rawText;
+      actual = result.parsedJson;
+      providerFailureType = null;
+
+      if (!actual && retryOnParseFailure && attempt < maxAttempts) {
+        await sleep(retryDelayMs(attempt));
+        continue;
+      }
+
+      break;
+    } catch (error) {
+      rawText = error instanceof Error ? error.message : String(error);
+      actual = null;
+      providerFailureType = classifyProviderFailure(error);
+
+      if ((providerFailureType === "timeout" || providerFailureType === "provider_error") && attempt < maxAttempts) {
+        await sleep(retryDelayMs(attempt));
+        continue;
+      }
+
+      break;
+    }
+  }
+
+  return {
+    rawText,
+    actual,
+    providerFailureType,
+    latencyMs: Date.now() - caseStartedAt
+  };
+}
+
 export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvaluationOutput> {
   const dataset = input.cases ?? (input.datasetPath ? await loadDataset(input.datasetPath) : null);
   if (!dataset || dataset.length === 0) {
@@ -72,30 +187,10 @@ export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvalu
   let matchedFields = 0;
   let totalFields = 0;
   const latencies: number[] = [];
-  const provider = getModelProvider(input.runConfig.modelProvider);
+  const provider = input.provider ?? getModelProvider(input.runConfig.modelProvider);
 
   for (const testcase of dataset) {
-    const startedAt = Date.now();
-    let rawText = "";
-    let actual: Record<string, unknown> | null = null;
-    let providerFailureType: FailureRecord["failureType"] | null = null;
-
-    try {
-      const result = await provider.invokeStructured({
-        apiKey: input.apiKey,
-        model: input.runConfig.modelName,
-        prompt: input.runConfig.promptText,
-        input: testcase.input,
-        schema: input.runConfig.schema
-      });
-      rawText = result.rawText;
-      actual = result.parsedJson;
-    } catch (error) {
-      rawText = error instanceof Error ? error.message : String(error);
-      providerFailureType = rawText.toLowerCase().includes("timeout") ? "timeout" : "provider_error";
-    }
-
-    const latencyMs = Date.now() - startedAt;
+    const { rawText, actual, providerFailureType, latencyMs } = await invokeCase(provider, input, testcase);
     latencies.push(latencyMs);
     const validation = validateSchemaOutput(input.runConfig.schema, actual);
     if (validation.valid) {

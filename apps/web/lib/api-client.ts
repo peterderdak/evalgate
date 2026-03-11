@@ -13,6 +13,12 @@ import type {
   RunSummaryResponse
 } from "@evalgate/shared";
 
+import {
+  getDevBrowserUser,
+  getSupabaseBrowserClient,
+  isDevBrowserAuthEnabled
+} from "./supabase/browser";
+
 export type ProjectWorkspaceResponse = {
   project: Project;
   datasets: Dataset[];
@@ -38,10 +44,34 @@ export type StartCiRunResponse = {
   status: Run["status"];
 };
 
+async function buildAuthHeaders(initHeaders?: HeadersInit) {
+  const headers = new Headers(initHeaders);
+
+  if (!headers.has("Authorization")) {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        headers.set("Authorization", `Bearer ${session.access_token}`);
+      }
+    } else if (isDevBrowserAuthEnabled()) {
+      const devUser = getDevBrowserUser();
+      headers.set("x-evalgate-user-id", devUser.id);
+      headers.set("x-evalgate-user-email", devUser.email);
+    }
+  }
+
+  return headers;
+}
+
 export async function apiRequest<T>(input: RequestInfo, init?: RequestInit) {
+  const headers = await buildAuthHeaders(init?.headers);
   const response = await fetch(input, {
+    ...init,
     cache: "no-store",
-    ...init
+    headers
   });
   if (!response.ok) {
     const text = await response.text();
