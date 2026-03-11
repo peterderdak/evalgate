@@ -1,119 +1,264 @@
 # EvalGate
 
-EvalGate is a pnpm monorepo for running structured LLM evaluations, storing results in Supabase, and turning deterministic thresholds into CI release gates.
+EvalGate is a **CLI-first evaluation tool for AI features**.
 
-## Stack
+It helps product and engineering teams answer one simple question before they ship a prompt or model change:
 
-- Frontend: Next.js 14, TypeScript, Tailwind CSS
-- Backend: Next.js App Router API routes
-- Worker: Node.js polling worker
-- Database: Supabase Postgres
-- Storage: Supabase Storage
-- Evaluation engine: shared TypeScript package in `packages/eval-core`
-- CI integration: TypeScript GitHub Action in `packages/github-action`
+**"Did quality stay good enough to release?"**
+
+EvalGate runs a dataset of examples against a model, validates the output against a JSON schema, computes deterministic metrics, and writes a `report.json` file you can use locally or in CI.
+
+## The Use Case
+
+Use EvalGate when your team is shipping an AI feature such as:
+
+- support ticket classification
+- structured extraction from emails, PDFs, or forms
+- routing or tagging workflows
+- any prompt that must return predictable JSON
+
+This is especially useful when a product manager, designer, or engineer wants to know:
+
+- did the new prompt get better or worse?
+- did a model swap break output quality?
+- is the output still valid JSON?
+- should this pull request ship or fail?
+
+## The Problem We Solve
+
+Most teams test AI changes informally.
+
+They tweak a prompt, try a few examples by hand, and decide it "looks fine." That breaks down fast:
+
+- results are inconsistent
+- nobody remembers which examples were tested
+- quality drops are caught late
+- model changes silently break downstream workflows
+- release decisions become opinion-based instead of evidence-based
+
+EvalGate turns that into a repeatable process.
+
+## The Value We Create
+
+EvalGate gives teams a lightweight release gate for AI features:
+
+- run the same dataset every time
+- validate outputs against a schema
+- measure quality with deterministic metrics
+- write a report anyone can review
+- fail CI when thresholds are missed
+
+Instead of debating whether a prompt "feels better," the team gets a report with pass/fail evidence.
+
+## Why This Saves Time
+
+For product and dev teams, EvalGate saves time in four ways:
+
+1. It replaces manual spot-checking with one repeatable command.
+2. It catches regressions before QA, support, or customers find them.
+3. It gives PMs and engineers a shared report instead of ad hoc Slack threads.
+4. It reduces rework caused by shipping prompt/model changes without a contract.
+
+In practice, that means less time spent:
+
+- rerunning the same examples by hand
+- arguing about whether quality changed
+- debugging bad releases after deployment
+- rebuilding trust in AI features after regressions
+
+## What You Get
+
+EvalGate currently computes:
+
+- `schema_valid_rate`
+- `enum_accuracy`
+- `field_level_accuracy`
+- `latency_p95_ms`
+
+And it writes a `report.json` file with:
+
+- pass/fail decision
+- summary counts
+- metrics
+- thresholds
+- failure examples
+
+## 5-Minute Quickstart
+
+If you can copy a file and run a command, you can use EvalGate.
+
+### 1. Install dependencies
+
+```bash
+corepack enable
+pnpm install
+```
+
+### 2. Create a starter config
+
+```bash
+pnpm evalgate:init
+```
+
+This creates `evalgate.config.json` in your repo root.
+
+### 3. Run the sample evaluation
+
+```bash
+pnpm evalgate run --dataset ./datasets/sample-support-tickets.jsonl --config ./evalgate.config.json
+```
+
+This writes a report to `.artifacts/report.json`.
+
+### 4. Open the report
+
+```bash
+cat ./.artifacts/report.json
+```
+
+### 5. Run against OpenAI instead of the mock provider
+
+```bash
+export OPENAI_API_KEY=your_key_here
+pnpm evalgate run \
+  --dataset ./datasets/sample-support-tickets.jsonl \
+  --config ./evalgate.config.json \
+  --provider openai \
+  --model gpt-4.1-mini
+```
+
+## What the Dataset Looks Like
+
+EvalGate expects **JSONL**.
+
+Each line is one test case:
+
+```jsonl
+{"id":"case_001","input":{"ticket_text":"Customer says they were double charged"},"expected":{"category":"billing"}}
+{"id":"case_002","input":{"ticket_text":"Please cancel my subscription immediately"},"expected":{"category":"cancellation"}}
+```
+
+Rules:
+
+- one valid JSON object per line
+- each line must include `input`
+- each line must include `expected`
+- `metadata` is optional
+
+## What the Config Looks Like
+
+The CLI runs from a simple JSON config file.
+
+Example: [docs/ticket-triage.evalgate.json](/Users/peterderdak/Documents/Playground/docs/ticket-triage.evalgate.json)
+
+```json
+{
+  "name": "Support Ticket Classifier",
+  "promptText": "Classify the support ticket into exactly one category: billing, refund, cancellation, technical, or unknown. Return valid JSON only.",
+  "modelProvider": "mock",
+  "modelName": "mock-classifier",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "category": {
+        "type": "string",
+        "enum": ["billing", "refund", "cancellation", "technical", "unknown"]
+      }
+    },
+    "required": ["category"],
+    "additionalProperties": false
+  },
+  "thresholds": {
+    "schema_valid_rate_min": 0.95,
+    "enum_accuracy_min": 0.9,
+    "field_level_accuracy_min": 0.9,
+    "latency_p95_max_ms": 2500
+  }
+}
+```
+
+## Core CLI Commands
+
+Create a starter config:
+
+```bash
+pnpm evalgate init --template ticket-triage --out ./evalgate.config.json
+```
+
+Run an eval:
+
+```bash
+pnpm evalgate run --dataset ./my-dataset.jsonl --config ./evalgate.config.json
+```
+
+Write the report somewhere specific:
+
+```bash
+pnpm evalgate run \
+  --dataset ./my-dataset.jsonl \
+  --config ./evalgate.config.json \
+  --out ./reports/report.json
+```
+
+Override provider or model without editing the config:
+
+```bash
+pnpm evalgate run \
+  --dataset ./my-dataset.jsonl \
+  --config ./evalgate.config.json \
+  --provider openai \
+  --model gpt-4.1-mini
+```
+
+## Non-Technical User Workflow
+
+The simplest workflow for a PM or non-technical operator is:
+
+1. Duplicate the starter config.
+2. Put example inputs and expected outputs into a `.jsonl` file.
+3. Run one command.
+4. Review `report.json`.
+5. Decide whether the prompt/model change should ship.
+
+That is the core EvalGate promise: **clear release evidence without building a full internal AI platform**.
+
+## Optional: Web App and Hosted Mode
+
+This repository still contains a web app, API routes, worker, Supabase integration, and GitHub Action support.
+
+Those parts are useful if you want:
+
+- multi-user project management
+- a hosted control plane
+- browser-based dataset uploads
+- report screens
+- CI token management
+
+But they are **not required** to use EvalGate as an evaluation tool.
+
+If your goal is the smallest possible useful product, start with the CLI.
 
 ## Repository Layout
 
 ```text
-apps/web              Next.js app and API routes
-apps/worker           Background job poller
-packages/db           SQL schema and migrations
-packages/eval-core    Dataset parser, runner, metrics, report generator
-packages/github-action GitHub Action for CI gating
-packages/shared       Shared API and domain types
-datasets              Sample JSONL datasets
-docs                  Architecture and Supabase setup
-.github/workflows     Repository CI and CI gating examples
+apps/web                 Optional web app and API routes
+apps/worker              Optional background worker
+packages/db              SQL schema and migrations
+packages/eval-core       CLI, dataset parser, runner, metrics, report generator
+packages/github-action   GitHub Action for CI gating
+packages/shared          Shared API and domain types
+datasets                 Sample JSONL dataset
+docs                     Example config and Supabase setup
+.github/workflows        CI examples
 ```
 
-## Current MVP Foundations
+## Sample Commands
 
-- Project, dataset, run-config, run, report, and job domain models
-- JSONL dataset validation with a 200-case limit
-- OpenAI structured-output evaluation runner
-- Deterministic local `mock` provider for end-to-end validation without external credentials
-- Deterministic metrics:
-  - `schema_valid_rate`
-  - `enum_accuracy`
-  - `field_level_accuracy`
-  - `latency_p95_ms`
-- `report.json` generation and storage
-- Supabase-first persistence with local `.data/` fallback for development
-- Separate worker process with a DB-backed jobs table
-- CI trigger and CI summary endpoints
-
-## Getting Started
-
-1. Enable Corepack and install dependencies:
-
-   ```bash
-   corepack enable
-   pnpm install
-   ```
-
-2. Copy environment variables:
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-3. Start the web app:
-
-   ```bash
-   pnpm dev
-   ```
-
-4. Start the worker in a second terminal if you disable inline processing:
-
-   ```bash
-   pnpm worker
-   ```
-
-## Environment
-
-Key variables:
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_BUCKET_DATASETS`
-- `SUPABASE_BUCKET_REPORTS`
-- `OPENAI_API_KEY` (required only for `openai` runs)
-- `EVALGATE_JOB_SECRET`
-- `EVALGATE_ALLOW_DEV_AUTH`
-- `EVALGATE_DEV_USER_ID`
-- `EVALGATE_DEV_USER_EMAIL`
-- `NEXT_PUBLIC_EVALGATE_ALLOW_DEV_AUTH`
-- `NEXT_PUBLIC_EVALGATE_DEV_USER_ID`
-- `NEXT_PUBLIC_EVALGATE_DEV_USER_EMAIL`
-- `EVALGATE_INLINE_WORKER`
-- `EVALGATE_WORKER_POLL_INTERVAL_MS`
-- `EVALGATE_JOB_LEASE_TIMEOUT_MS`
-- `EVALGATE_PROVIDER_TIMEOUT_MS`
-- `EVALGATE_PROVIDER_MAX_RETRIES`
-
-If Supabase credentials are not set, the repository falls back to local JSON metadata and filesystem storage under `.data/`.
-Set `EVALGATE_INLINE_WORKER=true` only for quick local development when you do not want to run the worker process separately.
-The worker reclaims stale leases after `EVALGATE_JOB_LEASE_TIMEOUT_MS`, and provider calls use the configured timeout/retry envelope before recording deterministic failures.
-If Supabase Auth is not configured, EvalGate falls back to a configurable development user. In deployed environments, disable that fallback and send a Supabase access token as `Authorization: Bearer <token>` to the API.
-
-## Supabase Setup
-
-1. Create a Supabase project.
-2. Run the SQL in `docs/supabase.sql`.
-3. Ensure storage buckets `eval-datasets` and `eval-reports` exist.
-4. Set the Supabase environment variables in `.env.local`.
-5. Add `OPENAI_API_KEY` only if you want to execute real OpenAI runs.
-
-## Sample Evaluation
-
-Run the sample dataset locally with the deterministic mock provider:
+Run the sample dataset with the local deterministic mock provider:
 
 ```bash
 pnpm eval:sample
 ```
-
-This writes the output report to `.artifacts/report.json`.
 
 Run the same sample against OpenAI:
 
@@ -121,20 +266,27 @@ Run the same sample against OpenAI:
 pnpm eval:sample:openai
 ```
 
-## CI Gating
+## Environment
 
-Repository CI is defined in `.github/workflows/ci.yml`.
+The CLI-only path only needs a few variables:
 
-An example EvalGate gating workflow is defined in `.github/workflows/evalgate-example.yml`.
+- `OPENAI_API_KEY` for real OpenAI runs
 
-The custom GitHub Action package lives in `packages/github-action`.
+The hosted/web path uses more:
 
-CI tokens are created from the project CI screen or the `POST /api/projects/:projectId/ci-tokens` route. Plaintext tokens are shown once, stored only as hashes, and must be passed to both:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_BUCKET_DATASETS`
+- `SUPABASE_BUCKET_REPORTS`
+- `EVALGATE_JOB_SECRET`
+- `EVALGATE_INLINE_WORKER`
+- `EVALGATE_WORKER_POLL_INTERVAL_MS`
+- `EVALGATE_JOB_LEASE_TIMEOUT_MS`
+- `EVALGATE_PROVIDER_TIMEOUT_MS`
+- `EVALGATE_PROVIDER_MAX_RETRIES`
 
-- `POST /api/ci/:projectId/run`
-- `GET /api/ci/runs/:runId/summary`
-
-The GitHub Action package sends pull request metadata when available, polls the authenticated summary route until the run finishes, and fails the job if the EvalGate gate fails.
+See [.env.example](/Users/peterderdak/Documents/Playground/.env.example).
 
 ## Docker
 

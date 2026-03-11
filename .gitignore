@@ -6,6 +6,7 @@ coverage
 .env
 .data
 .artifacts
+evalgate.config.json
 .tools
 .turbo
 *.tsbuildinfo
