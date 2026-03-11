@@ -2,18 +2,23 @@ import { NextResponse } from "next/server";
 
 import { parseDatasetText } from "@evalgate/eval-core";
 
-import { createDataset, getProject, listDatasets } from "../../../../../lib/server/database";
+import { createDataset, listDatasets } from "../../../../../lib/server/database";
+import { requireProjectOwner } from "../../../../../lib/server/authorization";
 
 export const runtime = "nodejs";
 
-export async function GET(_: Request, context: { params: { projectId: string } }) {
-  return NextResponse.json(await listDatasets(context.params.projectId));
+export async function GET(request: Request, context: { params: { projectId: string } }) {
+  const access = await requireProjectOwner(request, context.params.projectId);
+  if ("response" in access) {
+    return access.response;
+  }
+  return NextResponse.json(await listDatasets(access.project.id));
 }
 
 export async function POST(request: Request, context: { params: { projectId: string } }) {
-  const project = await getProject(context.params.projectId);
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  const access = await requireProjectOwner(request, context.params.projectId);
+  if ("response" in access) {
+    return access.response;
   }
 
   const formData = await request.formData();
@@ -25,7 +30,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   const contents = await file.text();
   const rows = parseDatasetText(contents);
   const dataset = await createDataset({
-    projectId: project.id,
+    projectId: access.project.id,
     filename: file.name,
     contents,
     rowCount: rows.length

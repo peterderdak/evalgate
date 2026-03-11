@@ -80,10 +80,14 @@ Key variables:
 - `SUPABASE_BUCKET_REPORTS`
 - `OPENAI_API_KEY` (required only for `openai` runs)
 - `EVALGATE_JOB_SECRET`
+- `EVALGATE_ALLOW_DEV_AUTH`
+- `EVALGATE_DEV_USER_ID`
+- `EVALGATE_DEV_USER_EMAIL`
 - `EVALGATE_INLINE_WORKER`
 
 If Supabase credentials are not set, the repository falls back to local JSON metadata and filesystem storage under `.data/`.
 Set `EVALGATE_INLINE_WORKER=true` only for quick local development when you do not want to run the worker process separately.
+If Supabase Auth is not configured, EvalGate falls back to a configurable development user. In deployed environments, disable that fallback and send a Supabase access token as `Authorization: Bearer <token>` to the API.
 
 ## Supabase Setup
 

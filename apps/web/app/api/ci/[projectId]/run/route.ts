@@ -26,6 +26,9 @@ export async function POST(request: Request, context: { params: { projectId: str
   if (!dataset || !runConfig) {
     return NextResponse.json({ error: "Dataset or run config not found" }, { status: 404 });
   }
+  if (dataset.projectId !== project.id || runConfig.projectId !== project.id) {
+    return NextResponse.json({ error: "Dataset or run config does not belong to project" }, { status: 400 });
+  }
   const apiKeySource = requiresProviderApiKey(runConfig.modelProvider) ? "env" : "none";
 
   const run = await createRun({
