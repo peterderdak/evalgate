@@ -1,19 +1,41 @@
 {
   "name": "evalgate",
-  "private": true,
   "version": "0.1.0",
+  "description": "Lightweight CLI for gating structured AI outputs before release",
+  "private": true,
   "packageManager": "pnpm@10.6.3",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "bin": {
+    "evalgate": "./dist/bin/evalgate.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "build": "pnpm --dir packages/eval-core build",
-    "test": "pnpm --dir packages/eval-core test",
-    "evalgate": "pnpm --dir packages/eval-core cli",
-    "evalgate:init": "pnpm --dir packages/eval-core cli init --template ticket-triage --out ./evalgate.config.json",
-    "eval:sample": "pnpm --dir packages/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --out ./.artifacts/report.json",
-    "eval:sample:openai": "pnpm --dir packages/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ./.artifacts/report.json --fail-on-gate",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "evalgate": "node --import tsx ./bin/evalgate.ts",
+    "evalgate:init": "node --import tsx ./bin/evalgate.ts init --template ticket-triage --out ./evalgate.config.json",
+    "eval:sample": "node --import tsx ./bin/evalgate.ts run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.evalgate.json --out ./.artifacts/report.json",
+    "eval:sample:openai": "node --import tsx ./bin/evalgate.ts run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.evalgate.json --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ./.artifacts/report.json --fail-on-gate",
     "demo:pass": "bash ./scripts/demo-pass.sh",
     "demo:fail": "bash ./scripts/demo-fail.sh"
   },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
   "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vitest": "^3.0.8"
   }

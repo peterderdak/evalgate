@@ -16,14 +16,14 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - name: Run EvalGate gate
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           pnpm evalgate run \
-            --dataset ./datasets/sample-support-tickets.jsonl \
-            --config ./docs/ticket-triage.evalgate.json \
+            --dataset ./examples/ticket-triage/dataset.jsonl \
+            --config ./examples/ticket-triage/config.evalgate.json \
             --provider openai \
             --model gpt-4.1-mini \
             --fail-on-gate
