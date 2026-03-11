@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 import type {
   CaseResult,
@@ -32,6 +32,10 @@ function getBuckets() {
 
 function sha256(text: string) {
   return createHash("sha256").update(text).digest("hex");
+}
+
+function generateCiToken() {
+  return `egt_${randomBytes(24).toString("hex")}`;
 }
 
 function stripUndefined<T extends Record<string, unknown>>(value: T) {
@@ -312,16 +316,6 @@ export async function createProject(input: {
     .single();
   if (error) {
     throw new Error(error.message);
-  }
-
-  const defaultToken = `ci_${data.id}`;
-  const { error: tokenError } = await supabase.from("ci_tokens").insert({
-    project_id: data.id,
-    token_hash: sha256(defaultToken),
-    label: "default"
-  });
-  if (tokenError) {
-    throw new Error(tokenError.message);
   }
 
   return mapProject(data);
@@ -684,6 +678,42 @@ export async function listCiTokens(projectId: string) {
     throw new Error(error.message);
   }
   return (data ?? []).map(mapCiToken);
+}
+
+export async function createCiToken(projectId: string, label?: string) {
+  const supabase = getSupabase();
+  const plaintextToken = generateCiToken();
+  const { data, error } = await supabase
+    .from("ci_tokens")
+    .insert({
+      project_id: projectId,
+      token_hash: sha256(plaintextToken),
+      label: label ?? null
+    })
+    .select("id, project_id, token_hash, label, last_used_at, created_at")
+    .single();
+  if (error) {
+    throw new Error(error.message);
+  }
+  return {
+    token: mapCiToken(data),
+    plaintextToken
+  };
+}
+
+export async function markCiTokenUsed(tokenId: string) {
+  const supabase = getSupabase();
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("ci_tokens")
+    .update({ last_used_at: now })
+    .eq("id", tokenId)
+    .select("id, project_id, token_hash, label, last_used_at, created_at")
+    .single();
+  if (error) {
+    throw new Error(error.message);
+  }
+  return mapCiToken(data);
 }
 
 export async function getJobByRunId(runId: string) {

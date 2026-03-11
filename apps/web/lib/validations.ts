@@ -47,3 +47,7 @@ export const startCiRunSchema = z.object({
     })
     .optional()
 });
+
+export const createCiTokenSchema = z.object({
+  label: z.string().trim().min(1).max(64).optional()
+});

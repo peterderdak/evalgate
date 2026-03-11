@@ -9,17 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - name: Run EvalGate
+        uses: your-org/evalgate-action@v1
         with:
-          version: 10.6.3
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - run: pnpm install --no-frozen-lockfile
-      - run: mkdir -p .artifacts
-      - run: pnpm --filter @evalgate/eval-core cli run --dataset ../../datasets/sample-support-tickets.jsonl --provider openai --model gpt-4.1-mini --api-key "$LLM_API_KEY" --out ../../.artifacts/report.json
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-      - run: |
-          node -e 'const fs=require("fs"); const report=JSON.parse(fs.readFileSync(".artifacts/report.json","utf8")); if (report.metrics.schema_valid_rate < 0.95 || report.metrics.field_level_accuracy < 0.9) { console.error("EvalGate gate failed", report.metrics); process.exit(1); }'
+          evalgate_url: ${{ secrets.EVALGATE_URL }}
+          project_id: proj_123
+          dataset_id: ds_123
+          run_config_id: cfg_123
+          evalgate_token: ${{ secrets.EVALGATE_TOKEN }}

@@ -106,6 +106,14 @@ export async function listCiTokens(...args: Parameters<typeof local.listCiTokens
   return useRemoteStore() ? remote.listCiTokens(...args) : local.listCiTokens(...args);
 }
 
+export async function createCiToken(...args: Parameters<typeof local.createCiToken>) {
+  return useRemoteStore() ? remote.createCiToken(...args) : local.createCiToken(...args);
+}
+
+export async function markCiTokenUsed(...args: Parameters<typeof local.markCiTokenUsed>) {
+  return useRemoteStore() ? remote.markCiTokenUsed(...args) : local.markCiTokenUsed(...args);
+}
+
 export async function getJobByRunId(...args: Parameters<typeof local.getJobByRunId>) {
   return useRemoteStore() ? remote.getJobByRunId(...args) : local.getJobByRunId(...args);
 }

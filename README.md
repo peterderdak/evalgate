@@ -109,6 +109,13 @@ An example EvalGate gating workflow is defined in `.github/workflows/evalgate-ex
 
 The custom GitHub Action package lives in `packages/github-action`.
 
+CI tokens are created from the project CI screen or the `POST /api/projects/:projectId/ci-tokens` route. Plaintext tokens are shown once, stored only as hashes, and must be passed to both:
+
+- `POST /api/ci/:projectId/run`
+- `GET /api/ci/:runId/summary`
+
+The GitHub Action package sends pull request metadata when available, polls the authenticated summary route until the run finishes, and fails the job if the EvalGate gate fails.
+
 ## Docker
 
 ```bash

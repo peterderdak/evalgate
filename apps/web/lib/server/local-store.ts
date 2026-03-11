@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -70,6 +70,10 @@ function sha256(text: string) {
   return createHash("sha256").update(text).digest("hex");
 }
 
+function generateCiToken() {
+  return `egt_${randomBytes(24).toString("hex")}`;
+}
+
 export async function saveDatasetFile(storagePath: string, contents: string) {
   const fullPath = path.join(STORAGE_DIR, storagePath);
   await mkdir(path.dirname(fullPath), { recursive: true });
@@ -108,15 +112,6 @@ export async function createProject(input: {
     updatedAt: new Date().toISOString()
   };
   db.projects.push(project);
-  if (!db.ciTokens.some((token) => token.projectId === project.id)) {
-    db.ciTokens.push({
-      id: createId("citok"),
-      projectId: project.id,
-      tokenHash: sha256(`ci_${project.id}`),
-      label: "default",
-      createdAt: new Date().toISOString()
-    });
-  }
   await persistDb(db);
   return project;
 }
@@ -288,6 +283,32 @@ export async function getCiTokenByHash(projectId: string, tokenHash: string) {
 export async function listCiTokens(projectId: string) {
   const db = await ensureDb();
   return db.ciTokens.filter((token) => token.projectId === projectId);
+}
+
+export async function createCiToken(projectId: string, label?: string) {
+  const db = await ensureDb();
+  const plaintextToken = generateCiToken();
+  const token: CiToken = {
+    id: createId("citok"),
+    projectId,
+    tokenHash: sha256(plaintextToken),
+    label,
+    createdAt: new Date().toISOString()
+  };
+  db.ciTokens.push(token);
+  await persistDb(db);
+  return { token, plaintextToken };
+}
+
+export async function markCiTokenUsed(tokenId: string) {
+  const db = await ensureDb();
+  const token = db.ciTokens.find((candidate) => candidate.id === tokenId);
+  if (!token) {
+    return null;
+  }
+  token.lastUsedAt = new Date().toISOString();
+  await persistDb(db);
+  return token;
 }
 
 export async function getJobByRunId(runId: string) {
