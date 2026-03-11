@@ -15,5 +15,5 @@ RUN pnpm install --no-frozen-lockfile
 COPY . .
 RUN pnpm build
 
-EXPOSE 3000
-CMD ["pnpm", "--filter", "@evalgate/web", "start"]
+ENTRYPOINT ["pnpm", "--filter", "@evalgate/eval-core", "cli"]
+CMD []
