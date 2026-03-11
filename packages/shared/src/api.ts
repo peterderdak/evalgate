@@ -1,0 +1,33 @@
+import type { Thresholds } from "./types";
+
+export type CreateProjectRequest = {
+  name: string;
+  description: string;
+  templateType: string;
+  defaultSchema?: Record<string, unknown>;
+  defaultThresholds?: Thresholds;
+};
+
+export type CreateRunConfigRequest = {
+  name: string;
+  promptText: string;
+  promptVersion?: string;
+  modelProvider: string;
+  modelName: string;
+  schema: Record<string, unknown>;
+  thresholds: Thresholds;
+};
+
+export type StartRunRequest = {
+  datasetId: string;
+  runConfigId: string;
+  apiKey: string;
+};
+
+export type StartCiRunRequest = StartRunRequest & {
+  pullRequest?: {
+    number: number;
+    sha: string;
+    branch: string;
+  };
+};

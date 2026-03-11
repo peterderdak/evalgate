@@ -1,0 +1,10 @@
+{
+  "name": "@evalgate/db",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./schema.sql",
+  "scripts": {
+    "build": "echo schema-only",
+    "test": "vitest run"
+  }
+}

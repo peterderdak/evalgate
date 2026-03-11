@@ -1,0 +1,22 @@
+name: EvalGate Example
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  evalgate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: mkdir -p .artifacts
+      - run: npx evalgate run --dataset datasets/sample-support-tickets.jsonl --provider openai --model gpt-4.1-mini --api-key "$LLM_API_KEY" --out .artifacts/report.json
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      - run: |
+          node -e 'const fs=require("fs"); const report=JSON.parse(fs.readFileSync(".artifacts/report.json","utf8")); if (report.metrics.schema_valid_rate < 0.95 || report.metrics.field_level_accuracy < 0.9) { console.error("EvalGate gate failed", report.metrics); process.exit(1); }'
