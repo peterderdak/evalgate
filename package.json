@@ -4,20 +4,14 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.6.3",
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "start": "pnpm --filter @evalgate/web start",
-    "test": "turbo test",
-    "lint": "turbo lint",
-    "worker": "pnpm --filter @evalgate/worker dev",
-    "evalgate": "pnpm --filter @evalgate/eval-core cli",
-    "evalgate:init": "pnpm --filter @evalgate/eval-core cli init --template ticket-triage --out ./evalgate.config.json",
-    "eval:sample": "pnpm --filter @evalgate/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --out ./.artifacts/report.json",
-    "eval:sample:openai": "pnpm --filter @evalgate/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ./.artifacts/report.json",
-    "action:build": "pnpm --filter @evalgate/github-action build"
+    "build": "pnpm --dir packages/eval-core build",
+    "test": "pnpm --dir packages/eval-core test",
+    "evalgate": "pnpm --dir packages/eval-core cli",
+    "evalgate:init": "pnpm --dir packages/eval-core cli init --template ticket-triage --out ./evalgate.config.json",
+    "eval:sample": "pnpm --dir packages/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --out ./.artifacts/report.json",
+    "eval:sample:openai": "pnpm --dir packages/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ./.artifacts/report.json --fail-on-gate"
   },
   "devDependencies": {
-    "turbo": "^2.4.4",
     "typescript": "^5.8.2",
     "vitest": "^3.0.8"
   }
