@@ -5,6 +5,7 @@ export const openAIProvider: ModelProvider = {
   async invokeStructured(params) {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
+      signal: params.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${params.apiKey}`

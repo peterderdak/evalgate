@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { RequireAuth } from "../../../components/auth-provider";
 import { ProjectShell } from "../../../components/project-shell";
 
 export default function ProjectLayout({
@@ -9,5 +10,9 @@ export default function ProjectLayout({
   children: ReactNode;
   params: { projectId: string };
 }) {
-  return <ProjectShell projectId={params.projectId}>{children}</ProjectShell>;
+  return (
+    <RequireAuth>
+      <ProjectShell projectId={params.projectId}>{children}</ProjectShell>
+    </RequireAuth>
+  );
 }

@@ -104,7 +104,24 @@ export const mockProvider: ModelProvider = {
   async invokeStructured(params) {
     const inputText = collectText(params.input).join(" ").toLowerCase();
     const simulatedLatencyMs = 20 + (hashText(inputText) % 25);
-    await new Promise((resolve) => setTimeout(resolve, simulatedLatencyMs));
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        params.signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, simulatedLatencyMs);
+
+      function onAbort() {
+        clearTimeout(timer);
+        reject(new Error("Provider timeout"));
+      }
+
+      if (params.signal?.aborted) {
+        onAbort();
+        return;
+      }
+
+      params.signal?.addEventListener("abort", onAbort, { once: true });
+    });
 
     const candidate = buildMockValue("", params.schema, params.input, inputText);
     const parsedJson =

@@ -83,10 +83,18 @@ Key variables:
 - `EVALGATE_ALLOW_DEV_AUTH`
 - `EVALGATE_DEV_USER_ID`
 - `EVALGATE_DEV_USER_EMAIL`
+- `NEXT_PUBLIC_EVALGATE_ALLOW_DEV_AUTH`
+- `NEXT_PUBLIC_EVALGATE_DEV_USER_ID`
+- `NEXT_PUBLIC_EVALGATE_DEV_USER_EMAIL`
 - `EVALGATE_INLINE_WORKER`
+- `EVALGATE_WORKER_POLL_INTERVAL_MS`
+- `EVALGATE_JOB_LEASE_TIMEOUT_MS`
+- `EVALGATE_PROVIDER_TIMEOUT_MS`
+- `EVALGATE_PROVIDER_MAX_RETRIES`
 
 If Supabase credentials are not set, the repository falls back to local JSON metadata and filesystem storage under `.data/`.
 Set `EVALGATE_INLINE_WORKER=true` only for quick local development when you do not want to run the worker process separately.
+The worker reclaims stale leases after `EVALGATE_JOB_LEASE_TIMEOUT_MS`, and provider calls use the configured timeout/retry envelope before recording deterministic failures.
 If Supabase Auth is not configured, EvalGate falls back to a configurable development user. In deployed environments, disable that fallback and send a Supabase access token as `Authorization: Bearer <token>` to the API.
 
 ## Supabase Setup

@@ -11,6 +11,10 @@ export type RunEvaluationInput = {
   projectId: string;
   datasetPath?: string;
   cases?: EvalCase[];
+  provider?: ModelProvider;
+  providerTimeoutMs?: number;
+  providerMaxRetries?: number;
+  retryOnParseFailure?: boolean;
   runConfig: {
     promptText: string;
     promptVersion?: string;
@@ -51,6 +55,7 @@ export type ModelInvokeParams = {
   prompt: string;
   input: Record<string, unknown>;
   schema: Record<string, unknown>;
+  signal?: AbortSignal;
 };
 
 export type ModelInvokeResult = {
