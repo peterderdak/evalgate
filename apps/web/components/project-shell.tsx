@@ -55,7 +55,7 @@ function ProjectDataProvider({ projectId, children }: { projectId: string; child
       setData(next);
       setError(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to load project workspace");
+      setError(cause instanceof Error ? cause.message : "Unable to load project data");
     } finally {
       if (showLoading) {
         setLoading(false);
@@ -80,7 +80,7 @@ function ProjectDataProvider({ projectId, children }: { projectId: string; child
         setError(null);
       } catch (cause) {
         if (!cancelled) {
-          setError(cause instanceof Error ? cause.message : "Unable to load project workspace");
+          setError(cause instanceof Error ? cause.message : "Unable to load project data");
         }
       } finally {
         if (!cancelled) {
@@ -142,14 +142,14 @@ function ProjectChrome({ projectId, children }: { projectId: string; children: R
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.22em] text-forest/60">
-              {loading && !data ? "Loading workspace" : data?.project.templateType ?? "Project workspace"}
+              {loading && !data ? "Loading project" : data?.project.templateType ?? "EvalGate project"}
             </p>
             <div>
               <h2 className="font-display text-3xl font-semibold text-ink sm:text-4xl">
                 {data?.project.name ?? "Project"}
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/65">
-                {data?.project.description ?? "EvalGate project workspace."}
+                {data?.project.description ?? "Optional companion view for this EvalGate project."}
               </p>
             </div>
           </div>
@@ -173,7 +173,7 @@ function ProjectChrome({ projectId, children }: { projectId: string; children: R
               onClick={() => void refresh()}
               type="button"
             >
-              {refreshing ? "Refreshing..." : "Refresh workspace"}
+              {refreshing ? "Refreshing..." : "Refresh data"}
             </button>
           </div>
         </div>
@@ -201,7 +201,7 @@ function ProjectChrome({ projectId, children }: { projectId: string; children: R
 
       {error ? (
         <div className={[cardClass, "border-red-200 bg-red-50/80 text-red-700"].join(" ")}>
-          <p className="text-sm font-medium">Workspace load failed</p>
+          <p className="text-sm font-medium">Project load failed</p>
           <p className="mt-2 text-sm">{error}</p>
         </div>
       ) : null}

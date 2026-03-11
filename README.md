@@ -229,8 +229,8 @@ This repository still contains a web app, API routes, worker, Supabase integrati
 Those parts are useful if you want:
 
 - multi-user project management
-- a hosted control plane
-- browser-based dataset uploads
+- an optional browser companion app
+- browser-based dataset management
 - report screens
 - CI token management
 
@@ -272,7 +272,7 @@ The CLI-only path only needs a few variables:
 
 - `OPENAI_API_KEY` for real OpenAI runs
 
-The hosted/web path uses more:
+The optional companion app and hosted path use more:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`

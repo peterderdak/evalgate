@@ -6,7 +6,7 @@ EvalGate is structured as a CLI-first monorepo with an optional hosted layer:
 - `packages/github-action`: TypeScript GitHub Action for CI gating.
 - `packages/shared`: shared domain and API types.
 - `packages/db`: SQL schema and migrations.
-- `apps/web`: optional Next.js application and API routes for teams that want a browser-based control plane.
+- `apps/web`: optional Next.js application and API routes for teams that want a browser-based companion app.
 - `apps/worker`: optional DB-backed polling worker for hosted queued evaluation jobs.
 
 ## CLI-first flow
