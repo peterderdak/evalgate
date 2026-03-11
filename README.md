@@ -1,41 +1,53 @@
 # EvalGate
 
-EvalGate is a GitHub-ready monorepo for running structured LLM evaluations and turning them into CI gates. It includes a Next.js 14 UI, Node.js API routes, a shared evaluation engine, Supabase integrations for Postgres and Storage, sample datasets, and workflow examples.
+EvalGate is a pnpm monorepo for running structured LLM evaluations, storing results in Supabase, and turning deterministic thresholds into CI release gates.
 
 ## Stack
 
 - Frontend: Next.js 14, TypeScript, Tailwind CSS
-- Backend: Next.js Node.js API routes
+- Backend: Next.js App Router API routes
+- Worker: Node.js polling worker
 - Database: Supabase Postgres
 - Storage: Supabase Storage
-- Evaluation engine: shared Node.js package in `packages/eval-core`
+- Evaluation engine: shared TypeScript package in `packages/eval-core`
+- CI integration: TypeScript GitHub Action in `packages/github-action`
 
-## Repository layout
+## Repository Layout
 
 ```text
 apps/web              Next.js app and API routes
-packages/eval-core    Evaluation runner, metrics, report generator, CLI
+apps/worker           Background job poller
+packages/db           SQL schema and migrations
+packages/eval-core    Dataset parser, runner, metrics, report generator
+packages/github-action GitHub Action for CI gating
+packages/shared       Shared API and domain types
 datasets              Sample JSONL datasets
-docs                  Architecture and Supabase schema notes
-.github/workflows     CI and EvalGate GitHub Action examples
+docs                  Architecture and Supabase setup
+.github/workflows     Repository CI and CI gating examples
 ```
 
-## Features
+## Current MVP Foundations
 
-- Create a project
-- Upload a JSONL dataset
-- Run an evaluation against OpenAI, Anthropic, or a mock provider
-- Validate responses with JSON Schema
-- Compute `schema_valid_rate`, `enum_accuracy`, `field_level_accuracy`, and `latency_p95`
-- Display evaluation results in a simple UI
-- Export a GitHub CI gate workflow template
+- Project, dataset, run-config, run, report, and job domain models
+- JSONL dataset validation with a 200-case limit
+- OpenAI structured-output evaluation runner
+- Deterministic metrics:
+  - `schema_valid_rate`
+  - `enum_accuracy`
+  - `field_level_accuracy`
+  - `latency_p95_ms`
+- `report.json` generation and storage
+- Supabase-first persistence with local `.data/` fallback for development
+- Separate worker process with a DB-backed jobs table
+- CI trigger and CI summary endpoints
 
-## Getting started
+## Getting Started
 
-1. Install dependencies:
+1. Enable Corepack and install dependencies:
 
    ```bash
-   npm install
+   corepack enable
+   pnpm install
    ```
 
 2. Copy environment variables:
@@ -44,69 +56,62 @@ docs                  Architecture and Supabase schema notes
    cp .env.example .env.local
    ```
 
-3. Start the app:
+3. Start the web app:
 
    ```bash
-   npm run dev
+   pnpm dev
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000).
+4. Start the worker in a second terminal if you disable inline processing:
 
-## Supabase setup
+   ```bash
+   pnpm worker
+   ```
+
+## Environment
+
+Key variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_BUCKET_DATASETS`
+- `SUPABASE_BUCKET_REPORTS`
+- `OPENAI_API_KEY`
+- `EVALGATE_JOB_SECRET`
+- `EVALGATE_INLINE_WORKER`
+
+If Supabase credentials are not set, the repository falls back to local JSON metadata and filesystem storage under `.data/`.
+Set `EVALGATE_INLINE_WORKER=true` only for quick local development when you do not want to run the worker process separately.
+
+## Supabase Setup
 
 1. Create a Supabase project.
 2. Run the SQL in `docs/supabase.sql`.
-3. Fill in `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`.
-4. Create storage buckets `eval-datasets` and `eval-reports` if they do not already exist.
+3. Ensure storage buckets `eval-datasets` and `eval-reports` exist.
+4. Set the Supabase and OpenAI environment variables in `.env.local`.
 
-If Supabase variables are missing, the web app falls back to `.data/` for a local demo mode.
+## Sample Evaluation
 
-## Running the evaluator
-
-Run the bundled sample dataset with the mock provider:
+Run the sample dataset against OpenAI:
 
 ```bash
-npm run eval:sample
+pnpm eval:sample
 ```
 
-Run directly against a provider:
+This writes the output report to `.artifacts/report.json`.
 
-```bash
-npx evalgate run \
-  --dataset datasets/sample-support-tickets.jsonl \
-  --provider openai \
-  --model gpt-4.1-mini \
-  --api-key "$OPENAI_API_KEY" \
-  --out .artifacts/report.json
-```
+## CI Gating
 
-## Exporting a GitHub gate
+Repository CI is defined in `.github/workflows/ci.yml`.
 
-Generate workflow YAML from the CLI:
+An example EvalGate gating workflow is defined in `.github/workflows/evalgate-example.yml`.
 
-```bash
-npm run export:gate
-```
-
-An example workflow is included at `.github/workflows/evalgate-example.yml`.
+The custom GitHub Action package lives in `packages/github-action`.
 
 ## Docker
-
-Build and run:
 
 ```bash
 docker build -t evalgate .
 docker run -p 3000:3000 --env-file .env.local evalgate
-```
-
-## Pushing to GitHub
-
-The repository is initialized as git. After review:
-
-```bash
-git add .
-git commit -m "Initial EvalGate scaffold"
-git branch -M main
-git remote add origin git@github.com:<your-user>/evalgate.git
-git push -u origin main
 ```

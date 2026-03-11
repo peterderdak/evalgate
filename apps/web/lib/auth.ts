@@ -1,6 +1,6 @@
 export async function getCurrentUser() {
   return {
-    id: "demo-user",
+    id: "00000000-0000-0000-0000-000000000001",
     email: "demo@evalgate.local"
   };
 }

@@ -1,6 +1,4 @@
-import path from "node:path";
-
-import { writeReportJson, runEvaluation } from "@evalgate/eval-core";
+import { parseDatasetText, runEvaluation } from "@evalgate/eval-core";
 import type { CaseResult, RunSummaryResponse } from "@evalgate/shared";
 
 import {
@@ -8,6 +6,7 @@ import {
   completeJob,
   createFailures,
   getDataset,
+  getJobByRunId,
   getRun,
   getRunConfig,
   getRunReport,
@@ -18,6 +17,7 @@ import {
   failJob
 } from "./database";
 import { createId } from "./ids";
+import { decryptJobSecret } from "./job-secrets";
 
 export async function processRun(runId: string) {
   const run = await getRun(runId);
@@ -30,6 +30,10 @@ export async function processRun(runId: string) {
   if (!dataset || !runConfig) {
     throw new Error("Missing dataset or run config");
   }
+  const job = await getJobByRunId(run.id);
+  if (!job) {
+    throw new Error("Run job not found");
+  }
 
   await updateRun(run.id, {
     status: "running",
@@ -37,14 +41,21 @@ export async function processRun(runId: string) {
     totalCases: dataset.rowCount
   });
 
-  const datasetStoragePath = path.join(process.cwd(), ".data", "storage", dataset.storagePath);
-  const apiKey = process.env.OPENAI_API_KEY ?? "";
+  const datasetText = await readDatasetFile(dataset.storagePath);
+  const apiKey =
+    job.payload.apiKeySource === "encrypted"
+      ? decryptJobSecret(job.payload.encryptedApiKey ?? "")
+      : process.env.OPENAI_API_KEY ?? "";
+  if (!apiKey) {
+    throw new Error("No provider API key available for run execution");
+  }
   const failures: Awaited<ReturnType<typeof runEvaluation>>["failures"] = [];
+  let processedCases = 0;
 
   const result = await runEvaluation({
     runId: run.id,
     projectId: run.projectId,
-    datasetPath: datasetStoragePath,
+    cases: parseDatasetText(datasetText),
     apiKey,
     runConfig,
     onCaseProcessed: async (caseResult) => {
@@ -63,8 +74,9 @@ export async function processRun(runId: string) {
         createdAt: new Date().toISOString()
       };
       await appendCaseResult(caseRow);
+      processedCases += 1;
       await updateRun(run.id, {
-        processedCases: (await getRun(run.id))?.processedCases! + 1
+        processedCases
       });
       if (caseResult.failure) {
         failures.push(caseResult.failure);
@@ -90,7 +102,6 @@ export async function processRun(runId: string) {
   }
 
   const reportPath = await saveRunReport(run.id, result.report);
-  await writeReportJson(path.join(process.cwd(), ".data", "storage", reportPath), result.report);
   await updateRun(run.id, {
     status: "completed",
     completedAt: new Date().toISOString(),
@@ -114,6 +125,11 @@ export async function processNextPendingJob(leaseOwner: string) {
     await completeJob(job.id);
     return job;
   } catch (error) {
+    await updateRun(job.runId, {
+      status: "failed",
+      completedAt: new Date().toISOString(),
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
     await failJob(job.id, error instanceof Error ? error.message : String(error));
     throw error;
   }
@@ -123,7 +139,19 @@ export async function maybeRunInline(runId: string) {
   if (process.env.EVALGATE_INLINE_WORKER !== "true") {
     return;
   }
-  await processRun(runId);
+  setTimeout(() => {
+    void processRun(runId).catch(async (error) => {
+      const job = await getJobByRunId(runId);
+      await updateRun(runId, {
+        status: "failed",
+        completedAt: new Date().toISOString(),
+        errorMessage: error instanceof Error ? error.message : String(error)
+      });
+      if (job) {
+        await failJob(job.id, error instanceof Error ? error.message : String(error));
+      }
+    });
+  }, 0);
 }
 
 export async function buildCiSummary(runId: string): Promise<RunSummaryResponse | null> {

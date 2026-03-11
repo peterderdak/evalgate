@@ -9,13 +9,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.3
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
       - run: mkdir -p .artifacts
-      - run: npx evalgate run --dataset datasets/sample-support-tickets.jsonl --provider openai --model gpt-4.1-mini --api-key "$LLM_API_KEY" --out .artifacts/report.json
+      - run: pnpm --filter @evalgate/eval-core cli run --dataset ../../datasets/sample-support-tickets.jsonl --provider openai --model gpt-4.1-mini --api-key "$LLM_API_KEY" --out ../../.artifacts/report.json
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
       - run: |

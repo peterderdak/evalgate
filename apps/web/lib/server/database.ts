@@ -1,331 +1,123 @@
-import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-
-import type {
-  CaseResult,
-  CiToken,
-  Dataset,
-  Job,
-  Project,
-  Run,
-  RunConfig,
-  RunReport
-} from "@evalgate/shared";
-
 import { getSupabaseServerClient } from "../supabase/client";
-import { createId } from "./ids";
+import * as local from "./local-store";
+import * as remote from "./supabase-store";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const DB_PATH = path.join(DATA_DIR, "db.json");
-const STORAGE_DIR = path.join(DATA_DIR, "storage");
-
-type LocalDb = {
-  users: Array<{ id: string; email: string; createdAt: string }>;
-  projects: Project[];
-  datasets: Dataset[];
-  runConfigs: RunConfig[];
-  runs: Run[];
-  runReports: Array<{ runId: string; reportPath: string; report: RunReport }>;
-  failures: Array<{
-    id: string;
-    runId: string;
-    testcaseId: string;
-    failureType: string;
-    expected: unknown;
-    actual: unknown;
-    diff: Record<string, unknown>;
-    latencyMs: number;
-    input: Record<string, unknown>;
-    createdAt: string;
-  }>;
-  caseResults: CaseResult[];
-  ciTokens: CiToken[];
-  jobs: Job[];
-};
-
-async function ensureDb() {
-  await mkdir(STORAGE_DIR, { recursive: true });
-  try {
-    const text = await readFile(DB_PATH, "utf8");
-    return JSON.parse(text) as LocalDb;
-  } catch {
-    const seed: LocalDb = {
-      users: [{ id: "demo-user", email: "demo@evalgate.local", createdAt: new Date().toISOString() }],
-      projects: [],
-      datasets: [],
-      runConfigs: [],
-      runs: [],
-      runReports: [],
-      failures: [],
-      caseResults: [],
-      ciTokens: [],
-      jobs: []
-    };
-    await writeFile(DB_PATH, JSON.stringify(seed, null, 2), "utf8");
-    return seed;
-  }
+function useRemoteStore() {
+  return Boolean(getSupabaseServerClient());
 }
 
-async function persistDb(db: LocalDb) {
-  await writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
+export function getStorageMode() {
+  return useRemoteStore() ? "supabase" : "local";
 }
 
-function sha256(text: string) {
-  return createHash("sha256").update(text).digest("hex");
+export async function saveDatasetFile(...args: Parameters<typeof local.saveDatasetFile>) {
+  return useRemoteStore() ? remote.saveDatasetFile(...args) : local.saveDatasetFile(...args);
 }
 
-export async function saveDatasetFile(storagePath: string, contents: string) {
-  const fullPath = path.join(STORAGE_DIR, storagePath);
-  await mkdir(path.dirname(fullPath), { recursive: true });
-  await writeFile(fullPath, contents, "utf8");
+export async function readDatasetFile(...args: Parameters<typeof local.readDatasetFile>) {
+  return useRemoteStore() ? remote.readDatasetFile(...args) : local.readDatasetFile(...args);
 }
 
-export async function readDatasetFile(storagePath: string) {
-  return readFile(path.join(STORAGE_DIR, storagePath), "utf8");
+export async function saveReportFile(...args: Parameters<typeof local.saveReportFile>) {
+  return useRemoteStore() ? remote.saveReportFile(...args) : local.saveReportFile(...args);
 }
 
-export async function saveReportFile(storagePath: string, contents: string) {
-  const fullPath = path.join(STORAGE_DIR, storagePath);
-  await mkdir(path.dirname(fullPath), { recursive: true });
-  await writeFile(fullPath, contents, "utf8");
+export async function createProject(...args: Parameters<typeof local.createProject>) {
+  return useRemoteStore() ? remote.createProject(...args) : local.createProject(...args);
 }
 
-export async function createProject(input: {
-  ownerId: string;
-  name: string;
-  description: string;
-  templateType: string;
-  defaultSchema?: Record<string, unknown>;
-  defaultThresholds?: Record<string, unknown>;
-}) {
-  const project: Project = {
-    id: createId("proj"),
-    ownerId: input.ownerId,
-    name: input.name,
-    description: input.description,
-    templateType: input.templateType,
-    defaultSchema: input.defaultSchema,
-    defaultThresholds: input.defaultThresholds,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  const db = await ensureDb();
-  db.projects.push(project);
-  if (db.ciTokens.filter((token) => token.projectId === project.id).length === 0) {
-    db.ciTokens.push({
-      id: createId("citok"),
-      projectId: project.id,
-      tokenHash: sha256(`ci_${project.id}`),
-      label: "default",
-      createdAt: new Date().toISOString()
-    });
-  }
-  await persistDb(db);
-  return project;
+export async function listProjects(...args: Parameters<typeof local.listProjects>) {
+  return useRemoteStore() ? remote.listProjects(...args) : local.listProjects(...args);
 }
 
-export async function listProjects(ownerId: string) {
-  const db = await ensureDb();
-  return db.projects.filter((project) => project.ownerId === ownerId);
+export async function getProject(...args: Parameters<typeof local.getProject>) {
+  return useRemoteStore() ? remote.getProject(...args) : local.getProject(...args);
 }
 
-export async function getProject(projectId: string) {
-  const db = await ensureDb();
-  return db.projects.find((project) => project.id === projectId) ?? null;
+export async function createDataset(...args: Parameters<typeof local.createDataset>) {
+  return useRemoteStore() ? remote.createDataset(...args) : local.createDataset(...args);
 }
 
-export async function createDataset(input: {
-  projectId: string;
-  filename: string;
-  contents: string;
-  rowCount: number;
-}) {
-  const db = await ensureDb();
-  const version = db.datasets.filter((dataset) => dataset.projectId === input.projectId).length + 1;
-  const dataset: Dataset = {
-    id: createId("ds"),
-    projectId: input.projectId,
-    version,
-    filename: input.filename,
-    storagePath: `${input.projectId}/datasets/v${version}-${input.filename}`,
-    rowCount: input.rowCount,
-    sha256: sha256(input.contents),
-    uploadedAt: new Date().toISOString()
-  };
-  db.datasets.push(dataset);
-  await persistDb(db);
-  await saveDatasetFile(dataset.storagePath, input.contents);
-  return dataset;
+export async function listDatasets(...args: Parameters<typeof local.listDatasets>) {
+  return useRemoteStore() ? remote.listDatasets(...args) : local.listDatasets(...args);
 }
 
-export async function listDatasets(projectId: string) {
-  const db = await ensureDb();
-  return db.datasets.filter((dataset) => dataset.projectId === projectId);
+export async function getDataset(...args: Parameters<typeof local.getDataset>) {
+  return useRemoteStore() ? remote.getDataset(...args) : local.getDataset(...args);
 }
 
-export async function getDataset(datasetId: string) {
-  const db = await ensureDb();
-  return db.datasets.find((dataset) => dataset.id === datasetId) ?? null;
+export async function createRunConfig(...args: Parameters<typeof local.createRunConfig>) {
+  return useRemoteStore() ? remote.createRunConfig(...args) : local.createRunConfig(...args);
 }
 
-export async function createRunConfig(input: Omit<RunConfig, "id" | "createdAt">) {
-  const db = await ensureDb();
-  const runConfig: RunConfig = {
-    ...input,
-    id: createId("cfg"),
-    createdAt: new Date().toISOString()
-  };
-  db.runConfigs.push(runConfig);
-  await persistDb(db);
-  return runConfig;
+export async function listRunConfigs(...args: Parameters<typeof local.listRunConfigs>) {
+  return useRemoteStore() ? remote.listRunConfigs(...args) : local.listRunConfigs(...args);
 }
 
-export async function listRunConfigs(projectId: string) {
-  const db = await ensureDb();
-  return db.runConfigs.filter((config) => config.projectId === projectId);
+export async function getRunConfig(...args: Parameters<typeof local.getRunConfig>) {
+  return useRemoteStore() ? remote.getRunConfig(...args) : local.getRunConfig(...args);
 }
 
-export async function getRunConfig(runConfigId: string) {
-  const db = await ensureDb();
-  return db.runConfigs.find((config) => config.id === runConfigId) ?? null;
+export async function createRun(...args: Parameters<typeof local.createRun>) {
+  return useRemoteStore() ? remote.createRun(...args) : local.createRun(...args);
 }
 
-export async function createRun(input: {
-  projectId: string;
-  datasetId: string;
-  runConfigId: string;
-  triggerSource: "manual" | "ci";
-}) {
-  const db = await ensureDb();
-  const run: Run = {
-    id: createId("run"),
-    projectId: input.projectId,
-    datasetId: input.datasetId,
-    runConfigId: input.runConfigId,
-    triggerSource: input.triggerSource,
-    status: "queued",
-    processedCases: 0,
-    createdAt: new Date().toISOString()
-  };
-  db.runs.push(run);
-  const job: Job = {
-    id: createId("job"),
-    type: "eval_run",
-    runId: run.id,
-    status: "pending",
-    attempts: 0,
-    maxAttempts: 3,
-    availableAt: new Date().toISOString(),
-    payload: {},
-    createdAt: new Date().toISOString()
-  };
-  db.jobs.push(job);
-  await persistDb(db);
-  return run;
+export async function listRuns(...args: Parameters<typeof local.listRuns>) {
+  return useRemoteStore() ? remote.listRuns(...args) : local.listRuns(...args);
 }
 
-export async function listRuns(projectId: string) {
-  const db = await ensureDb();
-  return db.runs.filter((run) => run.projectId === projectId);
+export async function getRun(...args: Parameters<typeof local.getRun>) {
+  return useRemoteStore() ? remote.getRun(...args) : local.getRun(...args);
 }
 
-export async function getRun(runId: string) {
-  const db = await ensureDb();
-  return db.runs.find((run) => run.id === runId) ?? null;
+export async function updateRun(...args: Parameters<typeof local.updateRun>) {
+  return useRemoteStore() ? remote.updateRun(...args) : local.updateRun(...args);
 }
 
-export async function updateRun(runId: string, patch: Partial<Run>) {
-  const db = await ensureDb();
-  const run = db.runs.find((item) => item.id === runId);
-  if (!run) {
-    return null;
-  }
-  Object.assign(run, patch);
-  await persistDb(db);
-  return run;
+export async function appendCaseResult(...args: Parameters<typeof local.appendCaseResult>) {
+  return useRemoteStore() ? remote.appendCaseResult(...args) : local.appendCaseResult(...args);
 }
 
-export async function appendCaseResult(result: CaseResult) {
-  const db = await ensureDb();
-  db.caseResults.push(result);
-  await persistDb(db);
+export async function listFailures(...args: Parameters<typeof local.listFailures>) {
+  return useRemoteStore() ? remote.listFailures(...args) : local.listFailures(...args);
 }
 
-export async function listFailures(runId: string) {
-  const db = await ensureDb();
-  return db.failures.filter((failure) => failure.runId === runId);
+export async function createFailures(...args: Parameters<typeof local.createFailures>) {
+  return useRemoteStore() ? remote.createFailures(...args) : local.createFailures(...args);
 }
 
-export async function createFailures(failures: LocalDb["failures"]) {
-  const db = await ensureDb();
-  db.failures.push(...failures);
-  await persistDb(db);
+export async function saveRunReport(...args: Parameters<typeof local.saveRunReport>) {
+  return useRemoteStore() ? remote.saveRunReport(...args) : local.saveRunReport(...args);
 }
 
-export async function saveRunReport(runId: string, report: RunReport) {
-  const db = await ensureDb();
-  const reportPath = `${report.project_id}/reports/${runId}.json`;
-  db.runReports = db.runReports.filter((row) => row.runId !== runId);
-  db.runReports.push({ runId, reportPath, report });
-  await persistDb(db);
-  await saveReportFile(reportPath, JSON.stringify(report, null, 2));
-  return reportPath;
+export async function getRunReport(...args: Parameters<typeof local.getRunReport>) {
+  return useRemoteStore() ? remote.getRunReport(...args) : local.getRunReport(...args);
 }
 
-export async function getRunReport(runId: string) {
-  const db = await ensureDb();
-  return db.runReports.find((row) => row.runId === runId) ?? null;
+export async function getCaseResults(...args: Parameters<typeof local.getCaseResults>) {
+  return useRemoteStore() ? remote.getCaseResults(...args) : local.getCaseResults(...args);
 }
 
-export async function getCaseResults(runId: string) {
-  const db = await ensureDb();
-  return db.caseResults.filter((result) => result.runId === runId);
+export async function getCiTokenByHash(...args: Parameters<typeof local.getCiTokenByHash>) {
+  return useRemoteStore() ? remote.getCiTokenByHash(...args) : local.getCiTokenByHash(...args);
 }
 
-export async function getCiTokenByHash(projectId: string, tokenHash: string) {
-  const db = await ensureDb();
-  return db.ciTokens.find((token) => token.projectId === projectId && token.tokenHash === tokenHash) ?? null;
+export async function listCiTokens(...args: Parameters<typeof local.listCiTokens>) {
+  return useRemoteStore() ? remote.listCiTokens(...args) : local.listCiTokens(...args);
 }
 
-export async function listCiTokens(projectId: string) {
-  const db = await ensureDb();
-  return db.ciTokens.filter((token) => token.projectId === projectId);
+export async function getJobByRunId(...args: Parameters<typeof local.getJobByRunId>) {
+  return useRemoteStore() ? remote.getJobByRunId(...args) : local.getJobByRunId(...args);
 }
 
-export async function leaseNextJob(leaseOwner: string) {
-  const db = await ensureDb();
-  const now = new Date().toISOString();
-  const job = db.jobs.find((candidate) => candidate.status === "pending" && candidate.availableAt <= now);
-  if (!job) {
-    return null;
-  }
-  job.status = "leased";
-  job.attempts += 1;
-  job.leasedAt = now;
-  job.leaseOwner = leaseOwner;
-  await persistDb(db);
-  return job;
+export async function leaseNextJob(...args: Parameters<typeof local.leaseNextJob>) {
+  return useRemoteStore() ? remote.leaseNextJob(...args) : local.leaseNextJob(...args);
 }
 
-export async function completeJob(jobId: string) {
-  const db = await ensureDb();
-  const job = db.jobs.find((candidate) => candidate.id === jobId);
-  if (!job) {
-    return;
-  }
-  job.status = "completed";
-  await persistDb(db);
+export async function completeJob(...args: Parameters<typeof local.completeJob>) {
+  return useRemoteStore() ? remote.completeJob(...args) : local.completeJob(...args);
 }
 
-export async function failJob(jobId: string, message: string) {
-  const db = await ensureDb();
-  const job = db.jobs.find((candidate) => candidate.id === jobId);
-  if (!job) {
-    return;
-  }
-  job.status = job.attempts >= job.maxAttempts ? "failed" : "pending";
-  job.availableAt = new Date(Date.now() + 1000 * Math.max(job.attempts, 1)).toISOString();
-  job.errorMessage = message;
-  await persistDb(db);
+export async function failJob(...args: Parameters<typeof local.failJob>) {
+  return useRemoteStore() ? remote.failJob(...args) : local.failJob(...args);
 }

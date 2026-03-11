@@ -14,6 +14,6 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   const payload = createProjectSchema.parse(await request.json());
-  const project = await createProject({ ...payload, ownerId: user.id });
+  const project = await createProject({ ...payload, ownerId: user.id, ownerEmail: user.email });
   return NextResponse.json(project);
 }

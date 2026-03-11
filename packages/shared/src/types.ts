@@ -7,6 +7,16 @@ export type EvalCase = {
   metadata?: Record<string, unknown>;
 };
 
+export type EvalRunJobPayload = {
+  apiKeySource: "encrypted" | "env";
+  encryptedApiKey?: string;
+  pullRequest?: {
+    number: number;
+    sha: string;
+    branch: string;
+  };
+};
+
 export type Thresholds = {
   schema_valid_rate_min?: number;
   enum_accuracy_min?: number;
@@ -164,7 +174,7 @@ export type Job = {
   leasedAt?: string;
   leaseOwner?: string;
   errorMessage?: string;
-  payload: JsonObject;
+  payload: EvalRunJobPayload;
   createdAt: string;
 };
 

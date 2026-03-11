@@ -29,12 +29,15 @@ export async function POST(request: Request, context: { params: { projectId: str
     return NextResponse.json({ error: "Dataset or run config not found" }, { status: 404 });
   }
 
-  process.env.OPENAI_API_KEY = payload.apiKey;
   const run = await createRun({
     projectId: project.id,
     datasetId: payload.datasetId,
     runConfigId: payload.runConfigId,
-    triggerSource: "ci"
+    triggerSource: "ci",
+    jobPayload: {
+      apiKeySource: "env",
+      pullRequest: payload.pullRequest
+    }
   });
   await maybeRunInline(run.id);
   return NextResponse.json({ runId: run.id, status: run.status });
