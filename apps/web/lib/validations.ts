@@ -3,7 +3,7 @@ import { z } from "zod";
 export const createProjectSchema = z.object({
   name: z.string().min(2),
   description: z.string().min(2),
-  templateType: z.string().min(2),
+  templateType: z.string().min(2).default("custom"),
   defaultSchema: z.record(z.unknown()).optional(),
   defaultThresholds: z
     .object({
@@ -36,7 +36,9 @@ export const startRunSchema = z.object({
   apiKey: z.string().min(1)
 });
 
-export const startCiRunSchema = startRunSchema.extend({
+export const startCiRunSchema = z.object({
+  datasetId: z.string().min(1),
+  runConfigId: z.string().min(1),
   pullRequest: z
     .object({
       number: z.number().int().positive(),

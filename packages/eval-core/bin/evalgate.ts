@@ -36,10 +36,13 @@ async function main() {
         schema: {
           type: "object",
           properties: {
-            category: { type: "string" }
+            category: {
+              type: "string",
+              enum: ["billing", "refund", "cancellation", "technical", "unknown"]
+            }
           },
           required: ["category"],
-          additionalProperties: true
+          additionalProperties: false
         },
         thresholds: {}
       }

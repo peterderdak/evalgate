@@ -24,7 +24,9 @@ export type StartRunRequest = {
   apiKey: string;
 };
 
-export type StartCiRunRequest = StartRunRequest & {
+export type StartCiRunRequest = {
+  datasetId: string;
+  runConfigId: string;
   pullRequest?: {
     number: number;
     sha: string;

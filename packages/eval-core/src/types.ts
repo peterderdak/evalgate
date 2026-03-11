@@ -9,7 +9,8 @@ import type {
 export type RunEvaluationInput = {
   runId: string;
   projectId: string;
-  datasetPath: string;
+  datasetPath?: string;
+  cases?: EvalCase[];
   runConfig: {
     promptText: string;
     promptVersion?: string;

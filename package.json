@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
+    "start": "pnpm --filter @evalgate/web start",
     "test": "turbo test",
     "lint": "turbo lint",
     "worker": "pnpm --filter @evalgate/worker dev",
-    "eval:sample": "pnpm --filter @evalgate/eval-core cli run --dataset ../../datasets/sample-support-tickets.jsonl --provider openai --model gpt-4.1-mini --out ../../.artifacts/report.json",
+    "eval:sample": "pnpm --filter @evalgate/eval-core cli run --dataset ../../datasets/sample-support-tickets.jsonl --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ../../.artifacts/report.json",
     "action:build": "pnpm --filter @evalgate/github-action build"
   },
   "devDependencies": {

@@ -51,7 +51,10 @@ function detectFailureType(input: {
 }
 
 export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvaluationOutput> {
-  const dataset = await loadDataset(input.datasetPath);
+  const dataset = input.cases ?? (input.datasetPath ? await loadDataset(input.datasetPath) : null);
+  if (!dataset || dataset.length === 0) {
+    throw new Error("No evaluation cases supplied");
+  }
   const failures: FailureRecord[] = [];
   const caseResults: EvaluationCaseResult[] = [];
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createRun, getProject, getRunConfig, getDataset } from "../../../../../lib/server/database";
 import { maybeRunInline } from "../../../../../lib/server/eval-service";
+import { encryptJobSecret } from "../../../../../lib/server/job-secrets";
 import { startRunSchema } from "../../../../../lib/validations";
 
 export const runtime = "nodejs";
@@ -19,12 +20,15 @@ export async function POST(request: Request, context: { params: { projectId: str
     return NextResponse.json({ error: "Dataset or run config not found" }, { status: 404 });
   }
 
-  process.env.OPENAI_API_KEY = payload.apiKey;
   const run = await createRun({
     projectId: project.id,
     datasetId: payload.datasetId,
     runConfigId: payload.runConfigId,
-    triggerSource: "manual"
+    triggerSource: "manual",
+    jobPayload: {
+      apiKeySource: "encrypted",
+      encryptedApiKey: encryptJobSecret(payload.apiKey)
+    }
   });
   await maybeRunInline(run.id);
   return NextResponse.json({ runId: run.id, status: "queued" });

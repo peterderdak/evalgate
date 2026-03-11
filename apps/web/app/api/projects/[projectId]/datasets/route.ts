@@ -1,8 +1,6 @@
-import { writeFile } from "node:fs/promises";
-
 import { NextResponse } from "next/server";
 
-import { loadDataset } from "@evalgate/eval-core";
+import { parseDatasetText } from "@evalgate/eval-core";
 
 import { createDataset, getProject, listDatasets } from "../../../../../lib/server/database";
 
@@ -25,9 +23,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
 
   const contents = await file.text();
-  const tempPath = `/tmp/${Date.now()}-${file.name}`;
-  await writeFile(tempPath, contents, "utf8");
-  const rows = await loadDataset(tempPath);
+  const rows = parseDatasetText(contents);
   const dataset = await createDataset({
     projectId: project.id,
     filename: file.name,

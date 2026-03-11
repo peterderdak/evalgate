@@ -73,6 +73,7 @@ create table failures (
   run_id uuid not null references runs(id) on delete cascade,
   testcase_id text not null,
   failure_type text not null,
+  input_json jsonb,
   expected_json jsonb,
   actual_json jsonb,
   diff_json jsonb,
@@ -127,3 +128,11 @@ create index idx_runs_status on runs(status);
 create index idx_failures_run_id on failures(run_id);
 create index idx_case_results_run_id on case_results(run_id);
 create index idx_jobs_status_available_at on jobs(status, available_at);
+
+insert into storage.buckets (id, name, public)
+values ('eval-datasets', 'eval-datasets', false)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('eval-reports', 'eval-reports', false)
+on conflict (id) do nothing;
