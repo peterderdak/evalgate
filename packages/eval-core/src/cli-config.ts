@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import type { Thresholds } from "@evalgate/shared";
+import type { Thresholds } from "./types.js";
 
 export type EvalgateCliConfig = {
   name?: string;

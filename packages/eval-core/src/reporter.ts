@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 
-import type { GateResult, RunReport, Thresholds } from "@evalgate/shared";
+import type { GateResult, RunReport, Thresholds } from "./types.js";
 
 export function evaluateGate(
   metrics: RunReport["metrics"],

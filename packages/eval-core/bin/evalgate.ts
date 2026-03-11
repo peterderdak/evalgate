@@ -2,12 +2,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { requiresProviderApiKey } from "@evalgate/shared";
-
 import {
   getCliTemplate,
   listCliTemplates,
   loadCliConfig,
+  requiresProviderApiKey,
   runEvaluation,
   writeReportJson
 } from "../src/index.js";
@@ -56,6 +55,7 @@ async function main() {
     const prompt = getArg("--prompt") ?? config.promptText;
     const promptVersion = getArg("--prompt-version") ?? config.promptVersion;
     const apiKey = getArg("--api-key") ?? process.env.OPENAI_API_KEY;
+    const failOnGate = process.argv.includes("--fail-on-gate");
 
     if (requiresProviderApiKey(provider) && !apiKey) {
       throw new Error(`Provider ${provider} requires --api-key or OPENAI_API_KEY`);
@@ -63,7 +63,6 @@ async function main() {
 
     const report = await runEvaluation({
       runId: `cli_run_${Date.now()}`,
-      projectId: "cli_project",
       datasetPath: resolvedDataset,
       apiKey: apiKey ?? "",
       runConfig: {
@@ -86,6 +85,10 @@ async function main() {
     process.stdout.write(`Latency p95 (ms): ${report.report.metrics.latency_p95_ms}\n`);
     process.stdout.write(`Report: ${out}\n`);
 
+    if (failOnGate && !report.pass) {
+      process.exitCode = 1;
+    }
+
     return;
   }
 
@@ -93,7 +96,7 @@ async function main() {
     [
       "Usage:",
       "  evalgate init --template ticket-triage --out evalgate.config.json",
-      "  evalgate run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>]",
+      "  evalgate run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>] [--fail-on-gate]",
       `Available templates: ${listCliTemplates().join(", ")}`
     ].join("\n")
   );

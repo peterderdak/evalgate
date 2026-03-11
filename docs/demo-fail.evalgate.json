@@ -1,0 +1,23 @@
+{
+  "name": "Demo Fail Gate",
+  "promptText": "Classify the support ticket into exactly one category: billing, refund, cancellation, technical, or unknown. Return valid JSON only.",
+  "modelProvider": "mock",
+  "modelName": "mock-classifier",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "category": {
+        "type": "string",
+        "enum": ["billing", "refund", "cancellation", "technical", "unknown"]
+      }
+    },
+    "required": ["category"],
+    "additionalProperties": false
+  },
+  "thresholds": {
+    "schema_valid_rate_min": 0.95,
+    "enum_accuracy_min": 0.9,
+    "field_level_accuracy_min": 0.9,
+    "latency_p95_max_ms": 1
+  }
+}
