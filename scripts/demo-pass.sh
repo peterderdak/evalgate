@@ -7,8 +7,8 @@ cd "$ROOT_DIR"
 echo "Running EvalGate pass demo..."
 
 pnpm evalgate run \
-  --dataset ./datasets/sample-support-tickets.jsonl \
-  --config ./docs/demo-pass.evalgate.json \
+  --dataset ./examples/ticket-triage/dataset.jsonl \
+  --config ./examples/ticket-triage/demo-pass.evalgate.json \
   --out ./.artifacts/demo-pass-report.json \
   --fail-on-gate
 

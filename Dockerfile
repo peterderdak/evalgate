@@ -3,9 +3,8 @@ WORKDIR /app
 
 RUN corepack enable
 
-COPY package.json pnpm-workspace.yaml tsconfig.base.json vitest.config.ts ./
-COPY packages/eval-core/package.json packages/eval-core/package.json
-RUN pnpm install --no-frozen-lockfile
+COPY package.json pnpm-lock.yaml tsconfig.json vitest.config.ts ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm build
