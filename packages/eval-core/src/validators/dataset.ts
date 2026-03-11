@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { MAX_DATASET_CASES } from "@evalgate/shared";
-import type { EvalCase } from "@evalgate/shared";
+import { MAX_DATASET_CASES, type EvalCase } from "../types.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
