@@ -9,7 +9,9 @@
     "evalgate": "pnpm --dir packages/eval-core cli",
     "evalgate:init": "pnpm --dir packages/eval-core cli init --template ticket-triage --out ./evalgate.config.json",
     "eval:sample": "pnpm --dir packages/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --out ./.artifacts/report.json",
-    "eval:sample:openai": "pnpm --dir packages/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ./.artifacts/report.json --fail-on-gate"
+    "eval:sample:openai": "pnpm --dir packages/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ./.artifacts/report.json --fail-on-gate",
+    "demo:pass": "bash ./scripts/demo-pass.sh",
+    "demo:fail": "bash ./scripts/demo-fail.sh"
   },
   "devDependencies": {
     "typescript": "^5.8.2",

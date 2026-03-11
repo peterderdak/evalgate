@@ -119,6 +119,26 @@ That is the simplest way to use EvalGate in GitHub Actions or any other CI runne
 
 An example workflow lives at [docs/github-actions-example.yml](/Users/peterderdak/Documents/Playground/docs/github-actions-example.yml).
 
+## Demo
+
+The public repo includes a ready-made pass/fail demo:
+
+- narrative and recording flow: [docs/demo-script.md](/Users/peterderdak/Documents/Playground/docs/demo-script.md)
+- passing config: [docs/demo-pass.evalgate.json](/Users/peterderdak/Documents/Playground/docs/demo-pass.evalgate.json)
+- failing config: [docs/demo-fail.evalgate.json](/Users/peterderdak/Documents/Playground/docs/demo-fail.evalgate.json)
+
+Run the pass demo:
+
+```bash
+pnpm demo:pass
+```
+
+Run the fail demo:
+
+```bash
+pnpm demo:fail
+```
+
 ## Dataset Format
 
 EvalGate accepts **JSONL** only.
@@ -216,7 +236,8 @@ If you are a technical PM, the simplest workflow is:
 ```text
 packages/eval-core       CLI, runner, validators, metrics, providers, report generator
 datasets                 Sample JSONL dataset
-docs                     Example config and CI workflow
+docs                     Example config, demo script, and CI workflow
+scripts                  Reproducible demo commands
 .github/workflows        Repo CI
 ```
 
