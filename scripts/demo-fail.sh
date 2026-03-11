@@ -9,8 +9,8 @@ echo "This demo is expected to fail the gate because latency_p95_max_ms is set t
 echo
 
 if pnpm evalgate run \
-  --dataset ./datasets/sample-support-tickets.jsonl \
-  --config ./docs/demo-fail.evalgate.json \
+  --dataset ./examples/ticket-triage/dataset.jsonl \
+  --config ./examples/ticket-triage/demo-fail.evalgate.json \
   --out ./.artifacts/demo-fail-report.json \
   --fail-on-gate; then
   echo
