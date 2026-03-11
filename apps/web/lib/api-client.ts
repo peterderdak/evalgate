@@ -94,7 +94,7 @@ export function createRunConfig(projectId: string, payload: CreateRunConfigReque
   });
 }
 
-export function startRun(projectId: string, payload: { datasetId: string; runConfigId: string; apiKey: string }) {
+export function startRun(projectId: string, payload: { datasetId: string; runConfigId: string; apiKey?: string }) {
   return apiRequest<StartRunResponse>(`/api/projects/${projectId}/runs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -142,7 +142,7 @@ export function getRunFailures(runId: string) {
 }
 
 export function getCiSummary(runId: string, token: string) {
-  return apiRequest<RunSummaryResponse>(`/api/ci/${runId}/summary`, {
+  return apiRequest<RunSummaryResponse>(`/api/ci/runs/${runId}/summary`, {
     headers: {
       Authorization: `Bearer ${token}`
     }

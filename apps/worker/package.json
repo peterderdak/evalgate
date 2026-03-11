@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "build": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "dev": "node --import tsx src/index.ts",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@evalgate/eval-core": "0.1.0",
-    "@evalgate/shared": "0.1.0",
+    "@evalgate/eval-core": "workspace:*",
+    "@evalgate/shared": "workspace:*",
     "tsx": "^4.19.3"
   },
   "devDependencies": {

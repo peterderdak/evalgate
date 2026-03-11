@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { requiresProviderApiKey } from "@evalgate/shared";
+
 import { authenticateCiToken } from "../../../../../lib/server/ci-auth";
 import { createRun, getProject, getRunConfig, getDataset } from "../../../../../lib/server/database";
 import { maybeRunInline } from "../../../../../lib/server/eval-service";
@@ -24,6 +26,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   if (!dataset || !runConfig) {
     return NextResponse.json({ error: "Dataset or run config not found" }, { status: 404 });
   }
+  const apiKeySource = requiresProviderApiKey(runConfig.modelProvider) ? "env" : "none";
 
   const run = await createRun({
     projectId: project.id,
@@ -31,7 +34,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     runConfigId: payload.runConfigId,
     triggerSource: "ci",
     jobPayload: {
-      apiKeySource: "env",
+      apiKeySource,
       pullRequest: payload.pullRequest
     }
   });

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -17,7 +18,23 @@ import type {
 
 import { createId } from "./ids";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+function findWorkspaceRoot(startDir: string) {
+  let currentDir = startDir;
+
+  for (;;) {
+    if (existsSync(path.join(currentDir, "pnpm-workspace.yaml"))) {
+      return currentDir;
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      return startDir;
+    }
+    currentDir = parentDir;
+  }
+}
+
+const DATA_DIR = path.join(findWorkspaceRoot(process.cwd()), ".data");
 const DB_PATH = path.join(DATA_DIR, "db.json");
 const STORAGE_DIR = path.join(DATA_DIR, "storage");
 

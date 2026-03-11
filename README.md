@@ -31,6 +31,7 @@ docs                  Architecture and Supabase setup
 - Project, dataset, run-config, run, report, and job domain models
 - JSONL dataset validation with a 200-case limit
 - OpenAI structured-output evaluation runner
+- Deterministic local `mock` provider for end-to-end validation without external credentials
 - Deterministic metrics:
   - `schema_valid_rate`
   - `enum_accuracy`
@@ -77,7 +78,7 @@ Key variables:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_BUCKET_DATASETS`
 - `SUPABASE_BUCKET_REPORTS`
-- `OPENAI_API_KEY`
+- `OPENAI_API_KEY` (required only for `openai` runs)
 - `EVALGATE_JOB_SECRET`
 - `EVALGATE_INLINE_WORKER`
 
@@ -89,17 +90,24 @@ Set `EVALGATE_INLINE_WORKER=true` only for quick local development when you do n
 1. Create a Supabase project.
 2. Run the SQL in `docs/supabase.sql`.
 3. Ensure storage buckets `eval-datasets` and `eval-reports` exist.
-4. Set the Supabase and OpenAI environment variables in `.env.local`.
+4. Set the Supabase environment variables in `.env.local`.
+5. Add `OPENAI_API_KEY` only if you want to execute real OpenAI runs.
 
 ## Sample Evaluation
 
-Run the sample dataset against OpenAI:
+Run the sample dataset locally with the deterministic mock provider:
 
 ```bash
 pnpm eval:sample
 ```
 
 This writes the output report to `.artifacts/report.json`.
+
+Run the same sample against OpenAI:
+
+```bash
+pnpm eval:sample:openai
+```
 
 ## CI Gating
 
@@ -112,7 +120,7 @@ The custom GitHub Action package lives in `packages/github-action`.
 CI tokens are created from the project CI screen or the `POST /api/projects/:projectId/ci-tokens` route. Plaintext tokens are shown once, stored only as hashes, and must be passed to both:
 
 - `POST /api/ci/:projectId/run`
-- `GET /api/ci/:runId/summary`
+- `GET /api/ci/runs/:runId/summary`
 
 The GitHub Action package sends pull request metadata when available, polls the authenticated summary route until the run finishes, and fails the job if the EvalGate gate fails.
 

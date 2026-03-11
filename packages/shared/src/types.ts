@@ -8,7 +8,7 @@ export type EvalCase = {
 };
 
 export type EvalRunJobPayload = {
-  apiKeySource: "encrypted" | "env";
+  apiKeySource: "encrypted" | "env" | "none";
   encryptedApiKey?: string;
   pullRequest?: {
     number: number;

@@ -1,4 +1,4 @@
-import type { CiToken, Thresholds } from "./types";
+import type { CiToken, Thresholds } from "./types.js";
 
 export type CreateProjectRequest = {
   name: string;
@@ -21,7 +21,7 @@ export type CreateRunConfigRequest = {
 export type StartRunRequest = {
   datasetId: string;
   runConfigId: string;
-  apiKey: string;
+  apiKey?: string;
 };
 
 export type StartCiRunRequest = {

@@ -1,5 +1,5 @@
-import Ajv from "ajv";
-import addFormats from "ajv-formats";
+import Ajv, { type ErrorObject } from "ajv/dist/ajv.js";
+import addFormats from "ajv-formats/dist/index.js";
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
@@ -9,6 +9,8 @@ export function validateSchemaOutput(schema: Record<string, unknown>, actual: un
   const valid = validate(actual);
   return {
     valid: Boolean(valid),
-    errors: (validate.errors ?? []).map((error) => `${error.instancePath || "/"} ${error.message ?? "invalid"}`.trim())
+    errors: (validate.errors ?? []).map((error: ErrorObject) =>
+      `${error.instancePath || "/"} ${error.message ?? "invalid"}`.trim()
+    )
   };
 }
