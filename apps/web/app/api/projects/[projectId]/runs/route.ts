@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 
 import { requiresProviderApiKey } from "@evalgate/shared";
 
-import { createRun, getProject, getRunConfig, getDataset } from "../../../../../lib/server/database";
+import { createRun, getRunConfig, getDataset } from "../../../../../lib/server/database";
+import { requireProjectOwner } from "../../../../../lib/server/authorization";
 import { maybeRunInline } from "../../../../../lib/server/eval-service";
 import { encryptJobSecret } from "../../../../../lib/server/job-secrets";
 import { startRunSchema } from "../../../../../lib/validations";
@@ -10,9 +11,9 @@ import { startRunSchema } from "../../../../../lib/validations";
 export const runtime = "nodejs";
 
 export async function POST(request: Request, context: { params: { projectId: string } }) {
-  const project = await getProject(context.params.projectId);
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  const access = await requireProjectOwner(request, context.params.projectId);
+  if ("response" in access) {
+    return access.response;
   }
 
   const payload = startRunSchema.parse(await request.json());
@@ -21,13 +22,16 @@ export async function POST(request: Request, context: { params: { projectId: str
   if (!dataset || !runConfig) {
     return NextResponse.json({ error: "Dataset or run config not found" }, { status: 404 });
   }
+  if (dataset.projectId !== access.project.id || runConfig.projectId !== access.project.id) {
+    return NextResponse.json({ error: "Dataset or run config does not belong to project" }, { status: 400 });
+  }
   const apiKeyRequired = requiresProviderApiKey(runConfig.modelProvider);
   if (apiKeyRequired && !payload.apiKey) {
     return NextResponse.json({ error: `API key required for provider ${runConfig.modelProvider}` }, { status: 400 });
   }
 
   const run = await createRun({
-    projectId: project.id,
+    projectId: access.project.id,
     datasetId: payload.datasetId,
     runConfigId: payload.runConfigId,
     triggerSource: "manual",

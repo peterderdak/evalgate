@@ -1,23 +1,28 @@
 import { NextResponse } from "next/server";
 
-import { createRunConfig, getProject, listRunConfigs } from "../../../../../lib/server/database";
+import { createRunConfig, listRunConfigs } from "../../../../../lib/server/database";
+import { requireProjectOwner } from "../../../../../lib/server/authorization";
 import { createRunConfigSchema } from "../../../../../lib/validations";
 
 export const runtime = "nodejs";
 
-export async function GET(_: Request, context: { params: { projectId: string } }) {
-  return NextResponse.json(await listRunConfigs(context.params.projectId));
+export async function GET(request: Request, context: { params: { projectId: string } }) {
+  const access = await requireProjectOwner(request, context.params.projectId);
+  if ("response" in access) {
+    return access.response;
+  }
+  return NextResponse.json(await listRunConfigs(access.project.id));
 }
 
 export async function POST(request: Request, context: { params: { projectId: string } }) {
-  const project = await getProject(context.params.projectId);
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  const access = await requireProjectOwner(request, context.params.projectId);
+  if ("response" in access) {
+    return access.response;
   }
 
   const payload = createRunConfigSchema.parse(await request.json());
   const runConfig = await createRunConfig({
-    projectId: project.id,
+    projectId: access.project.id,
     name: payload.name,
     promptText: payload.promptText,
     promptVersion: payload.promptVersion,

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { getDataset } from "../../../../lib/server/database";
+import { requireDatasetOwner } from "../../../../lib/server/authorization";
 
 export const runtime = "nodejs";
 
-export async function GET(_: Request, context: { params: { datasetId: string } }) {
-  const dataset = await getDataset(context.params.datasetId);
-  if (!dataset) {
-    return NextResponse.json({ error: "Dataset not found" }, { status: 404 });
+export async function GET(request: Request, context: { params: { datasetId: string } }) {
+  const access = await requireDatasetOwner(request, context.params.datasetId);
+  if ("response" in access) {
+    return access.response;
   }
-  return NextResponse.json(dataset);
+  return NextResponse.json(access.dataset);
 }
