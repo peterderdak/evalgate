@@ -1,67 +1,101 @@
 #!/usr/bin/env node
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { requiresProviderApiKey } from "@evalgate/shared";
 
-import { runEvaluation, writeReportJson } from "../src/index.js";
+import {
+  getCliTemplate,
+  listCliTemplates,
+  loadCliConfig,
+  runEvaluation,
+  writeReportJson
+} from "../src/index.js";
 
 function getArg(flag: string) {
   const index = process.argv.indexOf(flag);
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
+function resolveFromUserCwd(targetPath: string) {
+  if (path.isAbsolute(targetPath)) {
+    return targetPath;
+  }
+
+  return path.resolve(process.env.INIT_CWD ?? process.cwd(), targetPath);
+}
+
 async function main() {
   const command = process.argv[2];
 
+  if (command === "init") {
+    const template = getArg("--template") ?? "ticket-triage";
+    const out = resolveFromUserCwd(getArg("--out") ?? "evalgate.config.json");
+    const config = getCliTemplate(template);
+
+    await mkdir(path.dirname(out), { recursive: true });
+    await writeFile(out, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+    process.stdout.write(`Created ${out} from template "${template}".\n`);
+    return;
+  }
+
   if (command === "run") {
     const dataset = getArg("--dataset");
-    const provider = getArg("--provider") ?? "openai";
-    const model = getArg("--model") ?? "gpt-4.1-mini";
-    const apiKey = getArg("--api-key");
-    const out = getArg("--out");
-    const prompt = getArg("--prompt") ?? "Classify the input into the configured schema.";
+    const configPath = getArg("--config");
+    const out = resolveFromUserCwd(getArg("--out") ?? path.join(".artifacts", "report.json"));
 
-    if (!dataset || (requiresProviderApiKey(provider) && !apiKey)) {
-      throw new Error("Missing --dataset or required --api-key");
+    if (!dataset || !configPath) {
+      throw new Error("Missing required flags. Usage: evalgate run --dataset <path> --config <path>");
+    }
+
+    const resolvedDataset = resolveFromUserCwd(dataset);
+    const resolvedConfigPath = resolveFromUserCwd(configPath);
+    const config = await loadCliConfig(resolvedConfigPath);
+    const provider = getArg("--provider") ?? config.modelProvider;
+    const model = getArg("--model") ?? config.modelName;
+    const prompt = getArg("--prompt") ?? config.promptText;
+    const promptVersion = getArg("--prompt-version") ?? config.promptVersion;
+    const apiKey = getArg("--api-key") ?? process.env.OPENAI_API_KEY;
+
+    if (requiresProviderApiKey(provider) && !apiKey) {
+      throw new Error(`Provider ${provider} requires --api-key or OPENAI_API_KEY`);
     }
 
     const report = await runEvaluation({
-      runId: "cli_run",
+      runId: `cli_run_${Date.now()}`,
       projectId: "cli_project",
-      datasetPath: dataset,
+      datasetPath: resolvedDataset,
       apiKey: apiKey ?? "",
       runConfig: {
         promptText: prompt,
+        promptVersion,
         modelProvider: provider,
         modelName: model,
-        schema: {
-          type: "object",
-          properties: {
-            category: {
-              type: "string",
-              enum: ["billing", "refund", "cancellation", "technical", "unknown"]
-            }
-          },
-          required: ["category"],
-          additionalProperties: false
-        },
-        thresholds: {}
+        schema: config.schema,
+        thresholds: config.thresholds
       }
     });
 
-    if (out) {
-      await mkdir(path.dirname(out), { recursive: true });
-      await writeReportJson(out, report.report);
-    } else {
-      process.stdout.write(`${JSON.stringify(report.report, null, 2)}\n`);
-    }
+    await mkdir(path.dirname(out), { recursive: true });
+    await writeReportJson(out, report.report);
+    process.stdout.write(`Eval complete.\n`);
+    process.stdout.write(`Pass: ${report.pass ? "yes" : "no"}\n`);
+    process.stdout.write(`Schema valid rate: ${report.report.metrics.schema_valid_rate}\n`);
+    process.stdout.write(`Enum accuracy: ${report.report.metrics.enum_accuracy ?? "n/a"}\n`);
+    process.stdout.write(`Field accuracy: ${report.report.metrics.field_level_accuracy}\n`);
+    process.stdout.write(`Latency p95 (ms): ${report.report.metrics.latency_p95_ms}\n`);
+    process.stdout.write(`Report: ${out}\n`);
 
     return;
   }
 
   throw new Error(
-    "Usage: evalgate run --dataset <path> [--api-key <key>] [--provider openai|mock] [--model gpt-4.1-mini]"
+    [
+      "Usage:",
+      "  evalgate init --template ticket-triage --out evalgate.config.json",
+      "  evalgate run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>]",
+      `Available templates: ${listCliTemplates().join(", ")}`
+    ].join("\n")
   );
 }
 

@@ -1,4 +1,4 @@
-name: EvalGate Example
+name: EvalGate Hosted Example
 
 on:
   workflow_dispatch:
