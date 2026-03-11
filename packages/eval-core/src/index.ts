@@ -1,3 +1,4 @@
+export * from "./cli-config.js";
 export * from "./metrics/enum-accuracy.js";
 export * from "./metrics/field-level-accuracy.js";
 export * from "./metrics/latency-p95.js";

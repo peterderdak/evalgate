@@ -10,8 +10,10 @@
     "test": "turbo test",
     "lint": "turbo lint",
     "worker": "pnpm --filter @evalgate/worker dev",
-    "eval:sample": "pnpm --filter @evalgate/eval-core cli run --dataset ../../datasets/sample-support-tickets.jsonl --provider mock --model mock-classifier --out ../../.artifacts/report.json",
-    "eval:sample:openai": "pnpm --filter @evalgate/eval-core cli run --dataset ../../datasets/sample-support-tickets.jsonl --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ../../.artifacts/report.json",
+    "evalgate": "pnpm --filter @evalgate/eval-core cli",
+    "evalgate:init": "pnpm --filter @evalgate/eval-core cli init --template ticket-triage --out ./evalgate.config.json",
+    "eval:sample": "pnpm --filter @evalgate/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --out ./.artifacts/report.json",
+    "eval:sample:openai": "pnpm --filter @evalgate/eval-core cli run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ./.artifacts/report.json",
     "action:build": "pnpm --filter @evalgate/github-action build"
   },
   "devDependencies": {
