@@ -1,4 +1,5 @@
 import * as core from "@actions/core";
+import * as github from "@actions/github";
 
 type CiStartResponse = {
   runId: string;
@@ -24,6 +25,13 @@ async function main() {
   const datasetId = core.getInput("dataset_id");
   const runConfigId = core.getInput("run_config_id");
   const token = core.getInput("evalgate_token");
+  const pullRequest = github.context.payload.pull_request
+    ? {
+        number: github.context.payload.pull_request.number,
+        sha: github.context.payload.pull_request.head.sha,
+        branch: github.context.payload.pull_request.head.ref
+      }
+    : undefined;
 
   const startResponse = await fetch(`${baseUrl}/api/ci/${projectId}/run`, {
     method: "POST",
@@ -31,7 +39,7 @@ async function main() {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ datasetId, runConfigId })
+    body: JSON.stringify({ datasetId, runConfigId, pullRequest })
   });
 
   if (!startResponse.ok) {
@@ -53,6 +61,7 @@ async function main() {
       throw new Error(`Failed to poll EvalGate summary: ${response.status} ${await response.text()}`);
     }
     summary = (await response.json()) as CiSummaryResponse;
+    core.info(`EvalGate status: ${summary.status}`);
     if (summary.status === "completed" || summary.status === "failed") {
       break;
     }
@@ -60,6 +69,10 @@ async function main() {
 
   if (!summary) {
     throw new Error("EvalGate summary did not resolve");
+  }
+
+  if (summary.status !== "completed" && summary.status !== "failed") {
+    throw new Error(`EvalGate summary polling timed out while run was ${summary.status}`);
   }
 
   core.summary

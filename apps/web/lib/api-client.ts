@@ -1,5 +1,7 @@
 import type {
   CiToken,
+  CreateCiTokenRequest,
+  CreateCiTokenResponse,
   CreateProjectRequest,
   CreateRunConfigRequest,
   Dataset,
@@ -7,7 +9,8 @@ import type {
   Project,
   Run,
   RunConfig,
-  RunReport
+  RunReport,
+  RunSummaryResponse
 } from "@evalgate/shared";
 
 export type ProjectWorkspaceResponse = {
@@ -122,10 +125,26 @@ export function getRunStatus(runId: string) {
   return apiRequest<RunStatusResponse>(`/api/runs/${runId}`);
 }
 
+export function createCiToken(projectId: string, payload: CreateCiTokenRequest) {
+  return apiRequest<CreateCiTokenResponse>(`/api/projects/${projectId}/ci-tokens`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
 export function getRunReport(runId: string) {
   return apiRequest<RunReport>(`/api/runs/${runId}/report`);
 }
 
 export function getRunFailures(runId: string) {
   return apiRequest<FailureRecord[]>(`/api/runs/${runId}/failures`);
+}
+
+export function getCiSummary(runId: string, token: string) {
+  return apiRequest<RunSummaryResponse>(`/api/ci/${runId}/summary`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
 }

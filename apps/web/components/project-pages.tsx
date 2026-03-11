@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import type { Thresholds } from "@evalgate/shared";
+import type { RunSummaryResponse, Thresholds } from "@evalgate/shared";
 
-import { createRunConfig, startRun, uploadDataset } from "../lib/api-client";
+import { createCiToken, createRunConfig, getCiSummary, startCiRun, startRun, uploadDataset } from "../lib/api-client";
 import {
   cardClass,
   EmptyState,
@@ -68,6 +68,10 @@ function renderThresholdSummary(thresholds: Thresholds) {
   ]
     .filter(Boolean)
     .join("  •  ");
+}
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function ProjectOverviewPage() {
@@ -664,7 +668,33 @@ export function ProjectRunsPage() {
 }
 
 export function ProjectCiPage() {
-  const { data, loading } = useProjectData();
+  const { data, loading, refresh } = useProjectData();
+  const [tokenLabel, setTokenLabel] = useState("github-actions");
+  const [tokenValue, setTokenValue] = useState("");
+  const [issuedToken, setIssuedToken] = useState<{ plaintextToken: string; label?: string } | null>(null);
+  const [selectedDatasetId, setSelectedDatasetId] = useState("");
+  const [selectedRunConfigId, setSelectedRunConfigId] = useState("");
+  const [creatingToken, setCreatingToken] = useState(false);
+  const [testingRun, setTestingRun] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [tokenStatus, setTokenStatus] = useState<string | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<string | null>(null);
+  const [summary, setSummary] = useState<RunSummaryResponse | null>(null);
+
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    if (!selectedDatasetId && data.datasets[0]) {
+      setSelectedDatasetId(data.datasets[0].id);
+    }
+
+    if (!selectedRunConfigId && data.runConfigs[0]) {
+      setSelectedRunConfigId(data.runConfigs[0].id);
+    }
+  }, [data, selectedDatasetId, selectedRunConfigId]);
 
   if (loading && !data) {
     return <p className="text-sm text-ink/60">Loading CI settings...</p>;
@@ -678,6 +708,99 @@ export function ProjectCiPage() {
   const runConfigId = data.runConfigs[0]?.id ?? "cfg_123";
   const ciEndpoint = `/api/ci/${data.project.id}/run`;
   const summaryEndpoint = "/api/ci/<runId>/summary";
+  const readyForCiTest = data.datasets.length > 0 && data.runConfigs.length > 0;
+
+  async function handleCreateToken(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreatingToken(true);
+    setTokenError(null);
+    setTokenStatus(null);
+
+    try {
+      const created = await createCiToken(data.project.id, {
+        label: tokenLabel.trim() || undefined
+      });
+      setIssuedToken({
+        plaintextToken: created.plaintextToken,
+        label: created.token.label
+      });
+      setTokenValue(created.plaintextToken);
+      setTokenStatus(`Created CI token${created.token.label ? `: ${created.token.label}` : ""}`);
+      await refresh();
+    } catch (cause) {
+      setTokenError(cause instanceof Error ? cause.message : "Unable to create CI token");
+    } finally {
+      setCreatingToken(false);
+    }
+  }
+
+  async function handleCopyToken() {
+    if (!issuedToken?.plaintextToken || typeof navigator === "undefined" || !navigator.clipboard) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(issuedToken.plaintextToken);
+    setTokenStatus("Copied the newly issued CI token to the clipboard.");
+  }
+
+  async function handleTestCiRun(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!readyForCiTest) {
+      return;
+    }
+
+    setTestingRun(true);
+    setTestError(null);
+    setTestStatus(null);
+    setSummary(null);
+
+    try {
+      const started = await startCiRun(
+        data.project.id,
+        {
+          datasetId: selectedDatasetId,
+          runConfigId: selectedRunConfigId,
+          pullRequest: {
+            number: 42,
+            sha: "manual-ci-test",
+            branch: "workspace-ci-test"
+          }
+        },
+        tokenValue
+      );
+
+      setTestStatus(`CI run queued: ${started.runId}`);
+
+      let resolvedSummary: RunSummaryResponse | null = null;
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        await sleep(2500);
+        resolvedSummary = await getCiSummary(started.runId, tokenValue);
+        setSummary(resolvedSummary);
+
+        if (resolvedSummary.status === "completed" || resolvedSummary.status === "failed") {
+          break;
+        }
+      }
+
+      if (!resolvedSummary) {
+        throw new Error("CI summary did not resolve");
+      }
+
+      if (resolvedSummary.status !== "completed" && resolvedSummary.status !== "failed") {
+        throw new Error(`CI summary polling timed out while run was ${resolvedSummary.status}`);
+      }
+
+      setTestStatus(
+        resolvedSummary.status === "completed"
+          ? `CI run completed: ${resolvedSummary.pass ? "pass" : "fail"}`
+          : `CI run finished with status ${resolvedSummary.status}`
+      );
+    } catch (cause) {
+      setTestError(cause instanceof Error ? cause.message : "Unable to test the CI integration");
+    } finally {
+      setTestingRun(false);
+    }
+  }
 
   const workflowYaml = [
     "name: evalgate",
@@ -731,10 +854,47 @@ export function ProjectCiPage() {
           </div>
         </div>
 
-        <p className="mt-5 text-sm leading-6 text-ink/65">
-          Token creation UI is not implemented yet. The backend can validate hashed CI tokens, but issuing and revealing a
-          new token is still the next backend/frontend task.
-        </p>
+        <form className="mt-5 grid gap-4" onSubmit={handleCreateToken}>
+          <label className="grid gap-2 text-sm font-medium text-ink">
+            Token label
+            <input
+              className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
+              onChange={(event) => setTokenLabel(event.target.value)}
+              placeholder="github-actions"
+              value={tokenLabel}
+            />
+          </label>
+
+          <button
+            className="w-fit rounded-full bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-forest disabled:opacity-60"
+            disabled={creatingToken}
+            type="submit"
+          >
+            {creatingToken ? "Issuing..." : "Create CI token"}
+          </button>
+
+          {tokenStatus ? <p className="text-sm text-forest">{tokenStatus}</p> : null}
+          {tokenError ? <p className="text-sm text-red-700">{tokenError}</p> : null}
+        </form>
+
+        {issuedToken ? (
+          <div className="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50/70 p-5">
+            <p className="text-sm font-medium text-emerald-900">Plaintext token</p>
+            <p className="mt-2 text-sm leading-6 text-emerald-900/80">
+              This value is only shown now. The stored record is hashed and cannot be recovered later.
+            </p>
+            <pre className="mt-4 overflow-x-auto rounded-2xl border border-emerald-200 bg-white p-4 font-mono text-xs text-ink">
+              {issuedToken.plaintextToken}
+            </pre>
+            <button
+              className="mt-4 rounded-full border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-900 transition hover:border-emerald-500"
+              onClick={() => void handleCopyToken()}
+              type="button"
+            >
+              Copy token
+            </button>
+          </div>
+        ) : null}
 
         <pre className="mt-5 overflow-x-auto rounded-3xl border border-ink/10 bg-ink p-4 text-xs leading-6 text-mist">
           {curlCommand}
@@ -751,6 +911,131 @@ export function ProjectCiPage() {
           <pre className="mt-6 overflow-x-auto rounded-3xl border border-ink/10 bg-ink p-4 text-xs leading-6 text-mist">
             {workflowYaml}
           </pre>
+        </div>
+
+        <div className={cardClass}>
+          <SectionIntro
+            eyebrow="Test Integration"
+            title="Trigger a CI-authenticated run"
+            description="Use an issued token against the CI endpoint before wiring the GitHub secret in the external repository."
+          />
+
+          {!readyForCiTest ? (
+            <div className="mt-6 rounded-3xl border border-dashed border-ink/15 bg-mist/45 p-6 text-sm text-ink/65">
+              Create at least one dataset and one run config before testing CI runs.
+            </div>
+          ) : (
+            <form className="mt-6 grid gap-4" onSubmit={handleTestCiRun}>
+              <label className="grid gap-2 text-sm font-medium text-ink">
+                Dataset
+                <select
+                  className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
+                  onChange={(event) => setSelectedDatasetId(event.target.value)}
+                  value={selectedDatasetId}
+                >
+                  {data.datasets.map((dataset) => (
+                    <option key={dataset.id} value={dataset.id}>
+                      {dataset.filename} ({dataset.rowCount} cases)
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-ink">
+                Run config
+                <select
+                  className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
+                  onChange={(event) => setSelectedRunConfigId(event.target.value)}
+                  value={selectedRunConfigId}
+                >
+                  {data.runConfigs.map((runConfig) => (
+                    <option key={runConfig.id} value={runConfig.id}>
+                      {runConfig.name} ({runConfig.modelName})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-ink">
+                CI token
+                <input
+                  className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
+                  onChange={(event) => setTokenValue(event.target.value)}
+                  placeholder="egt_..."
+                  type="password"
+                  value={tokenValue}
+                />
+              </label>
+
+              <button
+                className="w-fit rounded-full bg-signal px-5 py-3 text-sm font-medium text-white transition hover:bg-amber-700 disabled:opacity-60"
+                disabled={testingRun || !tokenValue || !selectedDatasetId || !selectedRunConfigId}
+                type="submit"
+              >
+                {testingRun ? "Testing..." : "Trigger test CI run"}
+              </button>
+
+              {testStatus ? <p className="text-sm text-forest">{testStatus}</p> : null}
+              {testError ? <p className="text-sm text-red-700">{testError}</p> : null}
+            </form>
+          )}
+
+          {summary ? (
+            <div className="mt-6 grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <MetricCard
+                  label="status"
+                  value={summary.status}
+                  hint={
+                    summary.status === "completed"
+                      ? summary.pass
+                        ? "pass"
+                        : "fail"
+                      : summary.status === "failed"
+                        ? "failed"
+                        : "waiting for gate result"
+                  }
+                />
+                <MetricCard
+                  label="report"
+                  value={summary.reportUrl ? "available" : "pending"}
+                  hint={summary.reportUrl ?? "Report URL will appear after completion"}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <MetricCard label="schema_valid_rate" value={formatPercent(summary.metrics.schema_valid_rate)} />
+                <MetricCard label="enum_accuracy" value={formatPercent(summary.metrics.enum_accuracy)} />
+                <MetricCard label="field_level_accuracy" value={formatPercent(summary.metrics.field_level_accuracy)} />
+                <MetricCard label="latency_p95_ms" value={formatLatency(summary.metrics.latency_p95_ms)} />
+              </div>
+
+              <div className="rounded-3xl border border-ink/10 bg-sand/70 p-5">
+                <p className="text-sm font-medium text-ink">Gate reasons</p>
+                {summary.gateReasons.length === 0 ? (
+                  <p className="mt-2 text-sm text-ink/65">No gate failures recorded.</p>
+                ) : (
+                  <div className="mt-3 grid gap-2">
+                    {summary.gateReasons.map((reason) => (
+                      <p className="rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink/70" key={reason}>
+                        {reason}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {summary.reportUrl ? (
+                <a
+                  className="w-fit rounded-full border border-ink/15 px-4 py-2 text-sm font-medium text-ink transition hover:border-forest hover:text-forest"
+                  href={summary.reportUrl}
+                  target="_blank"
+                >
+                  Open report.json
+                </a>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className={cardClass}>

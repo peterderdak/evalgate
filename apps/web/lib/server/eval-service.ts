@@ -154,12 +154,31 @@ export async function maybeRunInline(runId: string) {
   }, 0);
 }
 
-export async function buildCiSummary(runId: string): Promise<RunSummaryResponse | null> {
+export async function buildCiSummary(runId: string, requestUrl?: string): Promise<RunSummaryResponse | null> {
   const run = await getRun(runId);
   const reportRow = await getRunReport(runId);
-  if (!run || !reportRow) {
+  if (!run) {
     return null;
   }
+
+  if (!reportRow) {
+    return {
+      runId: run.id,
+      status: run.status,
+      pass: false,
+      metrics: {
+        schema_valid_rate: null,
+        enum_accuracy: null,
+        field_level_accuracy: null,
+        latency_p95_ms: null
+      },
+      gateReasons: run.errorMessage ? [run.errorMessage] : [],
+      reportUrl: undefined
+    };
+  }
+
+  const reportPath = `/api/runs/${run.id}/report`;
+  const reportUrl = requestUrl ? new URL(reportPath, requestUrl).toString() : reportPath;
 
   return {
     runId: run.id,
@@ -170,6 +189,6 @@ export async function buildCiSummary(runId: string): Promise<RunSummaryResponse 
       const comparator = reason.operator === ">=" ? "below" : "above";
       return `${reason.metric} ${comparator} threshold: ${reason.actual} ${reason.operator === ">=" ? "<" : ">"} ${reason.threshold}`;
     }),
-    reportUrl: `/api/runs/${run.id}/report`
+    reportUrl
   };
 }

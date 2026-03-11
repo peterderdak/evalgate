@@ -158,7 +158,12 @@ export type RunSummaryResponse = {
   runId: string;
   status: Run["status"];
   pass: boolean;
-  metrics: RunReport["metrics"];
+  metrics: {
+    schema_valid_rate: number | null;
+    enum_accuracy: number | null;
+    field_level_accuracy: number | null;
+    latency_p95_ms: number | null;
+  };
   gateReasons: string[];
   reportUrl?: string;
 };

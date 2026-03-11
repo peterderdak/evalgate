@@ -1,4 +1,4 @@
-import type { Thresholds } from "./types";
+import type { CiToken, Thresholds } from "./types";
 
 export type CreateProjectRequest = {
   name: string;
@@ -32,4 +32,13 @@ export type StartCiRunRequest = {
     sha: string;
     branch: string;
   };
+};
+
+export type CreateCiTokenRequest = {
+  label?: string;
+};
+
+export type CreateCiTokenResponse = {
+  token: CiToken;
+  plaintextToken: string;
 };
