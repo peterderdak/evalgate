@@ -292,5 +292,7 @@ See [.env.example](./.env.example).
 
 ```bash
 docker build -t evalgate .
-docker run -p 3000:3000 --env-file .env.local evalgate
+docker run --rm -v "$PWD:/workspace" -w /workspace evalgate run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json
 ```
+
+If you want the optional hosted web app, run the web package directly instead of using the default Docker entrypoint.
