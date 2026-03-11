@@ -1,6 +1,6 @@
 # Demo Guide
 
-This is the fastest way to demo EvalGate to a technical PM, founder, or engineering lead.
+This is the fastest way to demo ezEval to a technical PM, founder, or engineering lead.
 
 ## Goal
 
@@ -14,8 +14,8 @@ That is enough to explain the product.
 ## Demo Assets
 
 - dataset: [examples/ticket-triage/dataset.jsonl](./examples/ticket-triage/dataset.jsonl)
-- passing config: [examples/ticket-triage/demo-pass.evalgate.json](./examples/ticket-triage/demo-pass.evalgate.json)
-- failing config: [examples/ticket-triage/demo-fail.evalgate.json](./examples/ticket-triage/demo-fail.evalgate.json)
+- passing config: [examples/ticket-triage/demo-pass.ezeval.json](./examples/ticket-triage/demo-pass.ezeval.json)
+- failing config: [examples/ticket-triage/demo-fail.ezeval.json](./examples/ticket-triage/demo-fail.ezeval.json)
 - pass script: [scripts/demo-pass.sh](./scripts/demo-pass.sh)
 - fail script: [scripts/demo-fail.sh](./scripts/demo-fail.sh)
 
@@ -25,7 +25,7 @@ Use this framing:
 
 1. Teams still QA prompt changes manually.
 2. That makes release decisions subjective.
-3. EvalGate turns that into a repeatable release gate.
+3. ezEval turns that into a repeatable release gate.
 4. A dataset, schema, and thresholds become the contract.
 
 ## Demo Flow
@@ -40,7 +40,7 @@ What to say:
 
 ### 2. Show the passing config
 
-Open [examples/ticket-triage/demo-pass.evalgate.json](./examples/ticket-triage/demo-pass.evalgate.json).
+Open [examples/ticket-triage/demo-pass.ezeval.json](./examples/ticket-triage/demo-pass.ezeval.json).
 
 What to say:
 
@@ -70,7 +70,7 @@ Point out:
 
 ### 5. Show the failing config
 
-Open [examples/ticket-triage/demo-fail.evalgate.json](./examples/ticket-triage/demo-fail.evalgate.json).
+Open [examples/ticket-triage/demo-fail.ezeval.json](./examples/ticket-triage/demo-fail.ezeval.json).
 
 What to say:
 
@@ -102,11 +102,11 @@ Point out:
 2. show the passing config
 3. run `pnpm demo:pass`
 4. run `pnpm demo:fail`
-5. close with: "EvalGate gives PMs and engineers one repeatable release decision instead of manual prompt QA."
+5. close with: "ezEval gives PMs and engineers one repeatable release decision instead of manual prompt QA."
 
 ## Recording Tips
 
 - keep the terminal zoomed in
 - use the pass demo first
 - spend more time on the release decision than on implementation details
-- position EvalGate as a lightweight release gate, not a full AI eval platform
+- position ezEval as a lightweight release gate, not a full AI eval platform

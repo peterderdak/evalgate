@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import type { Thresholds } from "./types.js";
 
-export type EvalgateCliConfig = {
+export type EzEvalCliConfig = {
   name?: string;
   promptText: string;
   promptVersion?: string;
@@ -12,7 +12,7 @@ export type EvalgateCliConfig = {
   thresholds: Thresholds;
 };
 
-const ticketTriageTemplate: EvalgateCliConfig = {
+const ticketTriageTemplate: EzEvalCliConfig = {
   name: "Support Ticket Classifier",
   promptText:
     "Classify the support ticket into exactly one category: billing, refund, cancellation, technical, or unknown. Return valid JSON only.",
@@ -37,7 +37,7 @@ const ticketTriageTemplate: EvalgateCliConfig = {
   }
 };
 
-const templates: Record<string, EvalgateCliConfig> = {
+const templates: Record<string, EzEvalCliConfig> = {
   "ticket-triage": ticketTriageTemplate
 };
 
@@ -57,7 +57,7 @@ function assertRecord(value: unknown, field: string) {
   }
 }
 
-export function parseCliConfig(input: unknown): EvalgateCliConfig {
+export function parseCliConfig(input: unknown): EzEvalCliConfig {
   if (!isRecord(input)) {
     throw new Error("Invalid config: expected a JSON object");
   }

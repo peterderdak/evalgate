@@ -29,7 +29,7 @@ async function main() {
 
   if (command === "init") {
     const template = getArg("--template") ?? "ticket-triage";
-    const out = resolveFromUserCwd(getArg("--out") ?? "evalgate.config.json");
+    const out = resolveFromUserCwd(getArg("--out") ?? "ezeval.config.json");
     const config = getCliTemplate(template);
 
     await mkdir(path.dirname(out), { recursive: true });
@@ -44,7 +44,7 @@ async function main() {
     const out = resolveFromUserCwd(getArg("--out") ?? path.join(".artifacts", "report.json"));
 
     if (!dataset || !configPath) {
-      throw new Error("Missing required flags. Usage: evalgate run --dataset <path> --config <path>");
+      throw new Error("Missing required flags. Usage: ezeval run --dataset <path> --config <path>");
     }
 
     const resolvedDataset = resolveFromUserCwd(dataset);
@@ -95,8 +95,8 @@ async function main() {
   throw new Error(
     [
       "Usage:",
-      "  evalgate init --template ticket-triage --out evalgate.config.json",
-      "  evalgate run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>] [--fail-on-gate]",
+      "  ezeval init --template ticket-triage --out ezeval.config.json",
+      "  ezeval run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>] [--fail-on-gate]",
       `Available templates: ${listCliTemplates().join(", ")}`
     ].join("\n")
   );
