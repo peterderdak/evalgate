@@ -8,7 +8,7 @@ import { AuthStatus } from "../components/auth-status";
 
 export const metadata: Metadata = {
   title: "EvalGate",
-  description: "Ship LLM evaluation gates with Next.js, Supabase, and GitHub Actions."
+  description: "CLI-first evaluation gates with an optional companion app for reports, projects, and CI setup."
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,21 +25,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   </Link>
                   <div className="flex flex-wrap items-center justify-end gap-3">
                     <p className="rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs uppercase tracking-[0.2em] text-ink/55">
-                      Next.js + Supabase + Worker
+                      Optional Companion App
                     </p>
                     <AuthStatus />
                   </div>
                 </div>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
-                    <h1 className="font-display text-4xl font-bold sm:text-6xl">Evaluation gates for production prompts.</h1>
+                    <h1 className="font-display text-4xl font-bold sm:text-6xl">Optional browser views for EvalGate runs.</h1>
                     <p className="mt-4 max-w-2xl text-base text-ink/70 sm:text-lg">
-                      Upload JSONL datasets, run schema-validated model checks, inspect metrics, and export a
-                      GitHub CI gate without leaving the repository.
+                      Run EvalGate from the CLI or CI, then use this companion app to inspect projects, datasets,
+                      metrics, and CI wiring in one place.
                     </p>
                   </div>
                   <div className="rounded-2xl border border-ink/10 bg-white/70 px-5 py-4 shadow-card backdrop-blur">
-                    <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Stack</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Companion stack</p>
                     <p className="mt-2 text-sm text-ink/70">Next.js 14, TypeScript, Tailwind, Node API routes, Supabase</p>
                   </div>
                 </div>

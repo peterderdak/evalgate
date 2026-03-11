@@ -50,7 +50,7 @@ export function SignInPage() {
           <SectionIntro
             eyebrow="Development Mode"
             title="Supabase Auth is not required here"
-            description="The app is currently using the development auth fallback. You can continue straight into the project workspace."
+            description="The app is currently using the development auth fallback. You can continue straight into the companion app."
           />
           <div className="mt-6">
             <Link

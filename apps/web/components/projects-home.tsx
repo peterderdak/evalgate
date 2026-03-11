@@ -115,7 +115,7 @@ export function ProjectsHome() {
                 Go to sign in
               </Link>
               <p className="text-sm text-ink/65">
-                After sign-in, this page will load your projects and let you create new workspaces.
+                After sign-in, this page will load your projects and let you create new ones.
               </p>
             </div>
           </div>
@@ -123,8 +123,8 @@ export function ProjectsHome() {
           <div className={cardClass}>
             <SectionIntro
               eyebrow="Create Project"
-              title="Start an evaluation workspace"
-              description="Define the project shell first, then attach datasets, run configs, and CI gates inside the project workspace."
+              title="Start an evaluation project"
+              description="Create the project first, then attach datasets, run configs, and CI gates inside the optional companion app."
             />
 
             <form className="mt-6 grid gap-4" onSubmit={handleCreateProject}>
@@ -180,7 +180,7 @@ export function ProjectsHome() {
         <div className={[cardClass, "bg-mist/55"].join(" ")}>
           <SectionIntro
             eyebrow="MVP Flow"
-            title="What the current app supports"
+            title="What the companion app supports"
             description="Create a project, upload a JSONL dataset, define the structured output schema and thresholds, launch a run, and inspect report.json from the run detail page."
           />
           <ul className="mt-5 grid gap-3 text-sm text-ink/70">
@@ -195,7 +195,7 @@ export function ProjectsHome() {
         <div className={cardClass}>
           <SectionIntro
             eyebrow="Projects"
-            title="Existing workspaces"
+            title="Existing projects"
             description="Select a project to manage datasets, run configs, active runs, and CI wiring."
           />
 
@@ -204,8 +204,8 @@ export function ProjectsHome() {
           ) : projects.length === 0 ? (
             <div className="mt-6 rounded-3xl border border-dashed border-ink/15 bg-sand/70 p-6 text-sm text-ink/65">
               {authRequired && !user
-                ? "Sign in first, then your project workspaces will appear here."
-                : "No projects yet. Create one from the panel on the left to enter the workspace flow."}
+                ? "Sign in first, then your projects will appear here."
+                : "No projects yet. Create one from the panel on the left to start the EvalGate flow."}
             </div>
           ) : (
             <div className="mt-6 grid gap-4">

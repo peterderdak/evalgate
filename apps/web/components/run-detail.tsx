@@ -87,7 +87,7 @@ export function RunDetail({ runId }: { runId: string }) {
   }
 
   if (!data) {
-    return <EmptyState title="Project unavailable" body="The project workspace could not be loaded for this run." />;
+    return <EmptyState title="Project unavailable" body="The project data could not be loaded for this run." />;
   }
 
   const run = data.runs.find((candidate) => candidate.id === runId);

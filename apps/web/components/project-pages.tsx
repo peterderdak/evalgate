@@ -83,7 +83,7 @@ export function ProjectOverviewPage() {
   }
 
   if (!data) {
-    return <EmptyState title="Project unavailable" body="The workspace data could not be loaded for this project." />;
+    return <EmptyState title="Project unavailable" body="The project data could not be loaded for this view." />;
   }
 
   const latestRun = sortByDate(data.runs)[0];
@@ -94,7 +94,7 @@ export function ProjectOverviewPage() {
         <SectionIntro
           eyebrow="Overview"
           title="Project summary"
-          description="This workspace is the control plane for datasets, structured run configs, run execution, and CI release gates."
+          description="Use this companion app to review datasets, structured run configs, run execution, and CI release gates around the CLI core."
         />
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -109,8 +109,8 @@ export function ProjectOverviewPage() {
         <div className={cardClass}>
           <SectionIntro
             eyebrow="Quick Links"
-            title="Move through the MVP flow"
-            description="The current UI is organized around the same sequence as the technical spec."
+            title="Move through the EvalGate flow"
+            description="These screens mirror the same project, dataset, run, and CI sequence supported by the CLI and API."
           />
           <div className="mt-5 grid gap-3">
             <Link className="rounded-2xl border border-ink/10 bg-sand/70 px-4 py-4 text-sm font-medium text-ink transition hover:border-forest hover:text-forest" href={`/projects/${data.project.id}/datasets`}>
@@ -220,7 +220,7 @@ export function ProjectDatasetsPage() {
   }
 
   if (!data) {
-    return <EmptyState title="Project unavailable" body="The dataset workspace could not be loaded." />;
+    return <EmptyState title="Project unavailable" body="The dataset view could not be loaded." />;
   }
 
   const datasets = sortByDate(data.datasets);
@@ -356,7 +356,7 @@ export function ProjectRunConfigsPage() {
   }
 
   if (!data) {
-    return <EmptyState title="Project unavailable" body="The run config workspace could not be loaded." />;
+    return <EmptyState title="Project unavailable" body="The run config view could not be loaded." />;
   }
 
   const runConfigs = sortByDate(data.runConfigs);
@@ -552,7 +552,7 @@ export function ProjectRunsPage() {
   }
 
   if (!data) {
-    return <EmptyState title="Project unavailable" body="The run workspace could not be loaded." />;
+    return <EmptyState title="Project unavailable" body="The run view could not be loaded." />;
   }
 
   const runs = sortByDate(data.runs);
@@ -708,7 +708,7 @@ export function ProjectCiPage() {
   }
 
   if (!data) {
-    return <EmptyState title="Project unavailable" body="The CI workspace could not be loaded." />;
+    return <EmptyState title="Project unavailable" body="The CI view could not be loaded." />;
   }
 
   const datasetId = data.datasets[0]?.id ?? "ds_123";
@@ -774,7 +774,7 @@ export function ProjectCiPage() {
           pullRequest: {
             number: 42,
             sha: "manual-ci-test",
-            branch: "workspace-ci-test"
+            branch: "companion-app-ci-test"
           }
         },
         tokenValue
