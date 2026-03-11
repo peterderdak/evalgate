@@ -1,54 +1,47 @@
 # EvalGate
 
-EvalGate is a lightweight CLI for testing structured AI outputs before you ship a prompt or model change.
+EvalGate is a CLI for regression-testing structured AI features before release.
 
-It helps product and engineering teams answer a simple release question:
+It answers one question:
 
-**Did this AI change stay good enough to ship?**
+**Is this prompt or model change still safe to ship?**
 
-EvalGate runs a JSONL dataset against a model, validates the output against a JSON schema, computes deterministic metrics, and writes a `report.json` file with a pass/fail gate.
+EvalGate runs a saved dataset against a model, validates the output against a JSON schema, computes deterministic metrics, and writes a `report.json` artifact with a pass/fail gate.
 
-## Who This Is For
+## Best Fit
 
-EvalGate is built for technical PMs, AI engineers, and small product teams shipping workflows like:
+EvalGate is most useful when your AI feature must return predictable JSON.
 
-- support ticket classification
-- structured extraction from emails, forms, or PDFs
-- content tagging and routing
-- any prompt that must return predictable JSON
+Good fits:
 
-## The Problem
+- classification
+- structured extraction
+- tagging and routing
+- any single-turn workflow with a defined output contract
 
-Most teams still evaluate prompt changes manually:
+Not a great fit:
 
-- they test a few examples by hand
-- they do not save those examples in one place
-- they cannot tell if quality got better or worse
-- release decisions become subjective
+- open-ended chat quality
+- agent behavior across many steps
+- subjective writing or tone evaluation
 
-That works for one demo. It does not work for a product.
+## Why Teams Use It
 
-## The Value
+Most teams still test prompt changes manually:
 
-EvalGate makes prompt QA repeatable:
+- they try a few examples by hand
+- they do not preserve those examples as a dataset
+- they do not have a consistent pass/fail bar
+- release decisions become opinion-driven
+
+EvalGate turns that into a repeatable release gate:
 
 - same dataset every run
 - same schema contract every run
-- same threshold checks every run
+- same thresholds every run
 - same `report.json` artifact every run
 
-Instead of asking whether a change "looks fine," the team gets evidence.
-
-## Why It Saves Time
-
-EvalGate saves product and dev teams time because it:
-
-- replaces manual spot-checking with one command
-- catches regressions before they reach QA or customers
-- gives PMs and engineers one shared report instead of ad hoc Slack debates
-- turns AI release decisions into a simple pass/fail gate
-
-## What EvalGate Measures
+## Metrics
 
 EvalGate currently computes:
 
@@ -56,6 +49,14 @@ EvalGate currently computes:
 - `enum_accuracy`
 - `field_level_accuracy`
 - `latency_p95_ms`
+
+## End-to-End Workflow
+
+1. Create a JSONL dataset of representative inputs and expected outputs.
+2. Define the prompt, provider, schema, and thresholds in an EvalGate config.
+3. Run `evalgate run`.
+4. Review `report.json`.
+5. Use `--fail-on-gate` in CI to block risky changes.
 
 ## Quickstart
 
@@ -72,60 +73,63 @@ pnpm install
 pnpm evalgate:init
 ```
 
-This creates `evalgate.config.json`.
+This creates `evalgate.config.json` in the repo root.
 
-### 3. Run the sample evaluation
-
-```bash
-pnpm evalgate run \
-  --dataset ./datasets/sample-support-tickets.jsonl \
-  --config ./evalgate.config.json
-```
-
-This writes `.artifacts/report.json`.
-
-### 4. Read the report
+### 3. Run the sample use case
 
 ```bash
-cat ./.artifacts/report.json
+pnpm eval:sample
 ```
 
-## Run Against OpenAI
+This uses:
+
+- [examples/ticket-triage/dataset.jsonl](./examples/ticket-triage/dataset.jsonl)
+- [examples/ticket-triage/config.evalgate.json](./examples/ticket-triage/config.evalgate.json)
+
+The output is written to:
+
+- [report.json](./.artifacts/report.json)
+
+### 4. Run against OpenAI
 
 ```bash
 export OPENAI_API_KEY=your_key_here
 
-pnpm evalgate run \
-  --dataset ./datasets/sample-support-tickets.jsonl \
-  --config ./evalgate.config.json \
-  --provider openai \
-  --model gpt-4.1-mini
+pnpm eval:sample:openai
 ```
 
-## Fail CI When the Gate Fails
-
-Use `--fail-on-gate` when you want the CLI to exit non-zero on a failed run:
+### 5. Fail CI when the gate fails
 
 ```bash
 pnpm evalgate run \
-  --dataset ./datasets/sample-support-tickets.jsonl \
-  --config ./evalgate.config.json \
+  --dataset ./examples/ticket-triage/dataset.jsonl \
+  --config ./examples/ticket-triage/config.evalgate.json \
   --provider openai \
   --model gpt-4.1-mini \
   --fail-on-gate
 ```
 
-That is the simplest way to use EvalGate in GitHub Actions or any other CI runner.
+## Example Use Case
 
-An example workflow lives at [docs/github-actions-example.yml](./docs/github-actions-example.yml).
+The repo ships with one complete example:
+
+- [examples/ticket-triage/README.md](./examples/ticket-triage/README.md)
+
+This example evaluates a support-ticket classifier that must return one category:
+
+- `billing`
+- `refund`
+- `cancellation`
+- `technical`
+- `unknown`
 
 ## Demo
 
-The public repo includes a ready-made pass/fail demo:
+The repo also includes a public demo flow with one passing run and one intentionally failing run.
 
-- narrative and recording flow: [docs/demo-script.md](./docs/demo-script.md)
-- passing config: [docs/demo-pass.evalgate.json](./docs/demo-pass.evalgate.json)
-- failing config: [docs/demo-fail.evalgate.json](./docs/demo-fail.evalgate.json)
+- narrative and recording guide: [docs/demo.md](./docs/demo.md)
+- passing gate config: [examples/ticket-triage/demo-pass.evalgate.json](./examples/ticket-triage/demo-pass.evalgate.json)
+- failing gate config: [examples/ticket-triage/demo-fail.evalgate.json](./examples/ticket-triage/demo-fail.evalgate.json)
 
 Run the pass demo:
 
@@ -141,9 +145,9 @@ pnpm demo:fail
 
 ## Dataset Format
 
-EvalGate accepts **JSONL** only.
+EvalGate accepts JSONL only.
 
-Each line must be one JSON object with:
+Each line must contain:
 
 - `input`
 - `expected`
@@ -159,7 +163,9 @@ Example:
 
 ## Config Format
 
-Example config: [docs/ticket-triage.evalgate.json](./docs/ticket-triage.evalgate.json)
+Example:
+
+- [examples/ticket-triage/config.evalgate.json](./examples/ticket-triage/config.evalgate.json)
 
 ```json
 {
@@ -192,7 +198,7 @@ Example config: [docs/ticket-triage.evalgate.json](./docs/ticket-triage.evalgate
 Create a starter config:
 
 ```bash
-pnpm evalgate init --template ticket-triage --out ./evalgate.config.json
+pnpm evalgate:init
 ```
 
 Run an eval:
@@ -201,7 +207,7 @@ Run an eval:
 pnpm evalgate run --dataset ./my-dataset.jsonl --config ./evalgate.config.json
 ```
 
-Write the report to a custom location:
+Write the report to a custom path:
 
 ```bash
 pnpm evalgate run \
@@ -210,7 +216,7 @@ pnpm evalgate run \
   --out ./reports/report.json
 ```
 
-Override the provider or model at runtime:
+Override provider or model:
 
 ```bash
 pnpm evalgate run \
@@ -220,32 +226,28 @@ pnpm evalgate run \
   --model gpt-4.1-mini
 ```
 
-## Suggested PM Workflow
+## CI Example
 
-If you are a technical PM, the simplest workflow is:
+A GitHub Actions example lives at:
 
-1. Create a dataset of representative examples.
-2. Define the expected JSON output for each case.
-3. Create an EvalGate config from the starter template.
-4. Run `pnpm evalgate run ...`.
-5. Review `report.json`.
-6. Decide whether the prompt or model change should ship.
+- [docs/github-actions.yml](./docs/github-actions.yml)
 
-## Repository Layout
+## Repo Layout
 
 ```text
-packages/eval-core       CLI, runner, validators, metrics, providers, report generator
-datasets                 Sample JSONL dataset
-docs                     Example config, demo script, and CI workflow
-scripts                  Reproducible demo commands
-.github/workflows        Repo CI
+bin/                     CLI entrypoint
+src/                     evaluation engine
+tests/                   unit tests
+examples/ticket-triage/  complete sample use case
+docs/                    demo and CI docs
+scripts/                 reproducible demo scripts
 ```
 
 ## Environment
 
 See [.env.example](./.env.example).
 
-For real provider runs, you only need:
+For real provider runs, the main variable is:
 
 - `OPENAI_API_KEY`
 
@@ -253,15 +255,15 @@ For real provider runs, you only need:
 
 ```bash
 docker build -t evalgate .
-docker run --rm -v "$PWD:/workspace" -w /workspace evalgate run --dataset ./datasets/sample-support-tickets.jsonl --config ./docs/ticket-triage.evalgate.json
+docker run --rm -v "$PWD:/workspace" -w /workspace evalgate run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.evalgate.json
 ```
 
-## Local Validation
-
-These are the main repository checks:
+## Validation
 
 ```bash
 pnpm test
 pnpm build
 pnpm eval:sample
+pnpm demo:pass
+pnpm demo:fail
 ```
