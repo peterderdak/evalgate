@@ -7,6 +7,8 @@ coverage
 .data
 .artifacts
 .tools
+.turbo
+*.tsbuildinfo
 *.log
 npm-debug.log*
 .DS_Store

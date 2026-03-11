@@ -2,6 +2,7 @@ export * from "./metrics/enum-accuracy.js";
 export * from "./metrics/field-level-accuracy.js";
 export * from "./metrics/latency-p95.js";
 export * from "./metrics/schema-valid-rate.js";
+export * from "./providers/mock.js";
 export * from "./providers/openai.js";
 export * from "./providers/provider.js";
 export * from "./reporter.js";

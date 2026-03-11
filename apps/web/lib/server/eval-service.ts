@@ -1,4 +1,5 @@
 import { parseDatasetText, runEvaluation } from "@evalgate/eval-core";
+import { requiresProviderApiKey } from "@evalgate/shared";
 import type { CaseResult, RunSummaryResponse } from "@evalgate/shared";
 
 import {
@@ -45,8 +46,10 @@ export async function processRun(runId: string) {
   const apiKey =
     job.payload.apiKeySource === "encrypted"
       ? decryptJobSecret(job.payload.encryptedApiKey ?? "")
-      : process.env.OPENAI_API_KEY ?? "";
-  if (!apiKey) {
+      : job.payload.apiKeySource === "env"
+        ? process.env.OPENAI_API_KEY ?? ""
+        : "";
+  if (requiresProviderApiKey(runConfig.modelProvider) && !apiKey) {
     throw new Error("No provider API key available for run execution");
   }
   const failures: Awaited<ReturnType<typeof runEvaluation>>["failures"] = [];
@@ -185,10 +188,12 @@ export async function buildCiSummary(runId: string, requestUrl?: string): Promis
     status: run.status,
     pass: reportRow.report.pass,
     metrics: reportRow.report.metrics,
-    gateReasons: reportRow.report.gate_reasons.map((reason) => {
-      const comparator = reason.operator === ">=" ? "below" : "above";
-      return `${reason.metric} ${comparator} threshold: ${reason.actual} ${reason.operator === ">=" ? "<" : ">"} ${reason.threshold}`;
-    }),
+    gateReasons: reportRow.report.gate_reasons
+      .filter((reason) => !reason.passed)
+      .map((reason) => {
+        const comparator = reason.operator === ">=" ? "below" : "above";
+        return `${reason.metric} ${comparator} threshold: ${reason.actual} ${reason.operator === ">=" ? "<" : ">"} ${reason.threshold}`;
+      }),
     reportUrl
   };
 }

@@ -5,6 +5,6 @@
   "main": "./schema.sql",
   "scripts": {
     "build": "echo schema-only",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   }
 }

@@ -52,7 +52,7 @@ async function main() {
   let summary: CiSummaryResponse | null = null;
   for (let attempt = 0; attempt < 60; attempt += 1) {
     await sleep(5000);
-    const response = await fetch(`${baseUrl}/api/ci/${started.runId}/summary`, {
+    const response = await fetch(`${baseUrl}/api/ci/runs/${started.runId}/summary`, {
       headers: {
         Authorization: `Bearer ${token}`
       }

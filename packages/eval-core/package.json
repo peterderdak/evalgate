@@ -2,18 +2,24 @@
   "name": "@evalgate/eval-core",
   "version": "0.1.0",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
   "bin": {
-    "evalgate": "./bin/evalgate.ts"
+    "evalgate": "./dist/bin/evalgate.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "cli": "tsx ./bin/evalgate.ts",
+    "cli": "node --import tsx ./bin/evalgate.ts",
     "test": "vitest run"
   },
   "dependencies": {
-    "@evalgate/shared": "0.1.0",
+    "@evalgate/shared": "workspace:*",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1"
   },

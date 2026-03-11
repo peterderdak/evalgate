@@ -1,3 +1,4 @@
+import { MODEL_PROVIDERS } from "@evalgate/shared";
 import { z } from "zod";
 
 export const createProjectSchema = z.object({
@@ -19,7 +20,7 @@ export const createRunConfigSchema = z.object({
   name: z.string().min(2),
   promptText: z.string().min(2),
   promptVersion: z.string().optional(),
-  modelProvider: z.string().min(2),
+  modelProvider: z.enum(MODEL_PROVIDERS),
   modelName: z.string().min(2),
   schema: z.record(z.unknown()),
   thresholds: z.object({
@@ -33,7 +34,7 @@ export const createRunConfigSchema = z.object({
 export const startRunSchema = z.object({
   datasetId: z.string().min(1),
   runConfigId: z.string().min(1),
-  apiKey: z.string().min(1)
+  apiKey: z.string().optional().default("")
 });
 
 export const startCiRunSchema = z.object({

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { authenticateCiToken } from "../../../../../lib/server/ci-auth";
-import { getRun } from "../../../../../lib/server/database";
-import { buildCiSummary } from "../../../../../lib/server/eval-service";
+import { authenticateCiToken } from "../../../../../../lib/server/ci-auth";
+import { getRun } from "../../../../../../lib/server/database";
+import { buildCiSummary } from "../../../../../../lib/server/eval-service";
 
 export const runtime = "nodejs";
 

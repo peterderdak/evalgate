@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { MODEL_PROVIDERS, requiresProviderApiKey } from "@evalgate/shared";
 import type { RunSummaryResponse, Thresholds } from "@evalgate/shared";
 
 import { createCiToken, createRunConfig, getCiSummary, startCiRun, startRun, uploadDataset } from "../lib/api-client";
@@ -397,7 +398,11 @@ export function ProjectRunConfigsPage() {
                 onChange={(event) => setModelProvider(event.target.value)}
                 value={modelProvider}
               >
-                <option value="openai">openai</option>
+                {MODEL_PROVIDERS.map((provider) => (
+                  <option key={provider} value={provider}>
+                    {provider}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="grid gap-2 text-sm font-medium text-ink">
@@ -553,6 +558,8 @@ export function ProjectRunsPage() {
   const runs = sortByDate(data.runs);
   const datasetsById = new Map(data.datasets.map((dataset) => [dataset.id, dataset]));
   const runConfigsById = new Map(data.runConfigs.map((runConfig) => [runConfig.id, runConfig]));
+  const selectedRunConfig = runConfigsById.get(runConfigId);
+  const apiKeyRequired = selectedRunConfig ? requiresProviderApiKey(selectedRunConfig.modelProvider) : true;
   const ready = data.datasets.length > 0 && data.runConfigs.length > 0;
 
   return (
@@ -561,7 +568,7 @@ export function ProjectRunsPage() {
         <SectionIntro
           eyebrow="Run Evaluation"
           title="Queue a manual run"
-          description="Manual runs accept a per-run provider API key. The backend encrypts the key into the job payload and the worker decrypts it at execution time."
+          description="Manual runs accept a per-run provider API key when the selected provider needs one. Mock runs stay local and can be used to validate the full pipeline without external credentials."
         />
 
         {!ready ? (
@@ -601,11 +608,11 @@ export function ProjectRunsPage() {
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-ink">
-              Provider API key
+              {apiKeyRequired ? "Provider API key" : "Provider API key (not required for mock)"}
               <input
                 className="rounded-2xl border border-ink/10 bg-sand px-4 py-3 text-sm outline-none ring-signal transition focus:ring-2"
                 onChange={(event) => setApiKey(event.target.value)}
-                placeholder="sk-..."
+                placeholder={apiKeyRequired ? "sk-..." : "Optional"}
                 type="password"
                 value={apiKey}
               />
@@ -613,7 +620,7 @@ export function ProjectRunsPage() {
 
             <button
               className="w-fit rounded-full bg-forest px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-800 disabled:opacity-60"
-              disabled={submitting || !apiKey || !datasetId || !runConfigId}
+              disabled={submitting || !datasetId || !runConfigId || (apiKeyRequired && !apiKey)}
               type="submit"
             >
               {submitting ? "Queueing..." : "Start run"}
@@ -707,11 +714,15 @@ export function ProjectCiPage() {
   const datasetId = data.datasets[0]?.id ?? "ds_123";
   const runConfigId = data.runConfigs[0]?.id ?? "cfg_123";
   const ciEndpoint = `/api/ci/${data.project.id}/run`;
-  const summaryEndpoint = "/api/ci/<runId>/summary";
+  const summaryEndpoint = "/api/ci/runs/<runId>/summary";
   const readyForCiTest = data.datasets.length > 0 && data.runConfigs.length > 0;
 
   async function handleCreateToken(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!data) {
+      return;
+    }
+
     setCreatingToken(true);
     setTokenError(null);
     setTokenStatus(null);
@@ -745,7 +756,7 @@ export function ProjectCiPage() {
 
   async function handleTestCiRun(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!readyForCiTest) {
+    if (!data || !readyForCiTest) {
       return;
     }
 

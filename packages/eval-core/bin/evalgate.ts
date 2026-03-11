@@ -2,6 +2,8 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
+import { requiresProviderApiKey } from "@evalgate/shared";
+
 import { runEvaluation, writeReportJson } from "../src/index.js";
 
 function getArg(flag: string) {
@@ -20,15 +22,15 @@ async function main() {
     const out = getArg("--out");
     const prompt = getArg("--prompt") ?? "Classify the input into the configured schema.";
 
-    if (!dataset || !apiKey) {
-      throw new Error("Missing --dataset or --api-key");
+    if (!dataset || (requiresProviderApiKey(provider) && !apiKey)) {
+      throw new Error("Missing --dataset or required --api-key");
     }
 
     const report = await runEvaluation({
       runId: "cli_run",
       projectId: "cli_project",
       datasetPath: dataset,
-      apiKey,
+      apiKey: apiKey ?? "",
       runConfig: {
         promptText: prompt,
         modelProvider: provider,
@@ -58,7 +60,9 @@ async function main() {
     return;
   }
 
-  throw new Error("Usage: evalgate run --dataset <path> --api-key <key> [--provider openai] [--model gpt-4.1-mini]");
+  throw new Error(
+    "Usage: evalgate run --dataset <path> [--api-key <key>] [--provider openai|mock] [--model gpt-4.1-mini]"
+  );
 }
 
 main().catch((error) => {

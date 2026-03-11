@@ -6,7 +6,7 @@ import { enumAccuracy } from "./metrics/enum-accuracy.js";
 import { fieldLevelAccuracy } from "./metrics/field-level-accuracy.js";
 import { latencyP95 } from "./metrics/latency-p95.js";
 import { schemaValidRate } from "./metrics/schema-valid-rate.js";
-import { openAIProvider } from "./providers/openai.js";
+import { getModelProvider } from "./providers/provider.js";
 import { compareEnum } from "./scorers/compare-enum.js";
 import { compareFields } from "./scorers/compare-fields.js";
 import { evaluateGate } from "./reporter.js";
@@ -30,11 +30,16 @@ function buildDiff(expected: Record<string, unknown>, actual: Record<string, unk
 }
 
 function detectFailureType(input: {
+  providerFailureType: FailureRecord["failureType"] | null;
   schemaValid: boolean;
   actual: Record<string, unknown> | null;
   enumCorrect: boolean | null;
   fieldAccuracy: number;
+  missingFields: number;
 }): FailureRecord["failureType"] | null {
+  if (input.providerFailureType) {
+    return input.providerFailureType;
+  }
   if (!input.actual) {
     return "parse_error";
   }
@@ -43,6 +48,9 @@ function detectFailureType(input: {
   }
   if (input.enumCorrect === false) {
     return "wrong_enum";
+  }
+  if (input.missingFields > 0) {
+    return "missing_field";
   }
   if (input.fieldAccuracy < 1) {
     return "field_mismatch";
@@ -64,14 +72,16 @@ export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvalu
   let matchedFields = 0;
   let totalFields = 0;
   const latencies: number[] = [];
+  const provider = getModelProvider(input.runConfig.modelProvider);
 
   for (const testcase of dataset) {
     const startedAt = Date.now();
     let rawText = "";
     let actual: Record<string, unknown> | null = null;
+    let providerFailureType: FailureRecord["failureType"] | null = null;
 
     try {
-      const result = await openAIProvider.invokeStructured({
+      const result = await provider.invokeStructured({
         apiKey: input.apiKey,
         model: input.runConfig.modelName,
         prompt: input.runConfig.promptText,
@@ -82,6 +92,7 @@ export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvalu
       actual = result.parsedJson;
     } catch (error) {
       rawText = error instanceof Error ? error.message : String(error);
+      providerFailureType = rawText.toLowerCase().includes("timeout") ? "timeout" : "provider_error";
     }
 
     const latencyMs = Date.now() - startedAt;
@@ -98,6 +109,9 @@ export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvalu
     const fieldComparison = compareFields(expectedObject, actual);
     matchedFields += fieldComparison.matchedFields;
     totalFields += fieldComparison.totalFields;
+    const missingFields = Object.keys(fieldComparison.expectedFlat).filter(
+      (key) => !(key in fieldComparison.actualFlat)
+    ).length;
 
     const enumComparison = compareEnum(expectedObject, actual, input.runConfig.schema);
     if (enumComparison) {
@@ -108,10 +122,12 @@ export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvalu
     }
 
     const failureType = detectFailureType({
+      providerFailureType,
       schemaValid: validation.valid,
       actual,
       enumCorrect: enumComparison?.correct ?? null,
-      fieldAccuracy: fieldComparison.accuracy
+      fieldAccuracy: fieldComparison.accuracy,
+      missingFields
     });
 
     const caseResult: EvaluationCaseResult = {
