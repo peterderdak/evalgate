@@ -1,0 +1,20 @@
+{
+  "name": "evalgate",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.6.3",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "worker": "pnpm --filter @evalgate/worker dev",
+    "eval:sample": "pnpm --filter @evalgate/eval-core cli run --dataset ../../datasets/sample-support-tickets.jsonl --provider openai --model gpt-4.1-mini --out ../../.artifacts/report.json",
+    "action:build": "pnpm --filter @evalgate/github-action build"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.4",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8"
+  }
+}
