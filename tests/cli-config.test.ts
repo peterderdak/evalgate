@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { getCliTemplate, parseCliConfig } from "../src/cli-config.js";
 
-describe("cli config", () => {
+describe("CLI config helpers", () => {
   it("returns the ticket-triage starter template", () => {
     const template = getCliTemplate("ticket-triage");
 
@@ -24,5 +24,9 @@ describe("cli config", () => {
 
     expect(config.modelProvider).toBe("mock");
     expect(config.modelName).toBe("mock-classifier");
+  });
+
+  it("rejects an invalid config shape", () => {
+    expect(() => parseCliConfig([])).toThrow("Invalid config: expected a JSON object");
   });
 });

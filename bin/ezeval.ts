@@ -24,8 +24,22 @@ function resolveFromUserCwd(targetPath: string) {
   return path.resolve(process.env.INIT_CWD ?? process.cwd(), targetPath);
 }
 
+function usageText() {
+  return [
+    "Usage:",
+    "  ezeval init --template ticket-triage --out ezeval.config.json",
+    "  ezeval run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>] [--fail-on-gate]",
+    `Available templates: ${listCliTemplates().join(", ")}`
+  ].join("\n");
+}
+
 async function main() {
   const command = process.argv[2];
+
+  if (!command || command === "help" || process.argv.includes("--help") || process.argv.includes("-h")) {
+    process.stdout.write(`${usageText()}\n`);
+    return;
+  }
 
   if (command === "init") {
     const template = getArg("--template") ?? "ticket-triage";
@@ -44,7 +58,7 @@ async function main() {
     const out = resolveFromUserCwd(getArg("--out") ?? path.join(".artifacts", "report.json"));
 
     if (!dataset || !configPath) {
-      throw new Error("Missing required flags. Usage: ezeval run --dataset <path> --config <path>");
+      throw new Error("Missing required flags.\n\nUsage: ezeval run --dataset <path> --config <path>");
     }
 
     const resolvedDataset = resolveFromUserCwd(dataset);
@@ -92,14 +106,7 @@ async function main() {
     return;
   }
 
-  throw new Error(
-    [
-      "Usage:",
-      "  ezeval init --template ticket-triage --out ezeval.config.json",
-      "  ezeval run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>] [--fail-on-gate]",
-      `Available templates: ${listCliTemplates().join(", ")}`
-    ].join("\n")
-  );
+  throw new Error(usageText());
 }
 
 main().catch((error) => {

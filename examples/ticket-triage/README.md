@@ -2,7 +2,7 @@
 
 This is the sample ezEval use case included in the repo.
 
-It models a support-ticket classifier that must return exactly one structured label:
+It models a support-ticket classifier that must return exactly one label:
 
 - `billing`
 - `refund`
@@ -13,9 +13,9 @@ It models a support-ticket classifier that must return exactly one structured la
 Files:
 
 - [dataset.jsonl](./examples/ticket-triage/dataset.jsonl): sample evaluation dataset
-- [config.ezeval.json](./examples/ticket-triage/config.ezeval.json): default config
+- [config.ezeval.json](./examples/ticket-triage/config.ezeval.json): default run config
 - [demo-pass.ezeval.json](./examples/ticket-triage/demo-pass.ezeval.json): passing demo gate
-- [demo-fail.ezeval.json](./examples/ticket-triage/demo-fail.ezeval.json): intentionally failing demo gate
+- [demo-fail.ezeval.json](./examples/ticket-triage/demo-fail.ezeval.json): intentionally failing gate
 
 Run the standard sample:
 

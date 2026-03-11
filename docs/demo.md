@@ -1,4 +1,4 @@
-# Demo Guide
+# Demo Runbook
 
 This is the fastest way to demo ezEval to a technical PM, founder, or engineering lead.
 
@@ -44,7 +44,7 @@ Open [examples/ticket-triage/demo-pass.ezeval.json](./examples/ticket-triage/dem
 
 What to say:
 
-"This file defines the prompt, provider, schema, and pass/fail thresholds."
+"This file defines the prompt, provider, schema, and release thresholds."
 
 ### 3. Run the passing demo
 
@@ -107,6 +107,6 @@ Point out:
 ## Recording Tips
 
 - keep the terminal zoomed in
-- use the pass demo first
+- run the pass demo first
 - spend more time on the release decision than on implementation details
 - position ezEval as a lightweight release gate, not a full AI eval platform

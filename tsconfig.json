@@ -20,8 +20,5 @@
     "baseUrl": ".",
     "outDir": "dist"
   },
-  "include": [
-    "src/**/*.ts",
-    "bin/**/*.ts"
-  ]
+  "include": ["src/**/*.ts", "bin/**/*.ts"]
 }

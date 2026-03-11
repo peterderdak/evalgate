@@ -13,5 +13,5 @@ pnpm ezeval run \
   --fail-on-gate
 
 echo
-echo "Pass demo finished."
-echo "Report: $ROOT_DIR/.artifacts/demo-pass-report.json"
+echo "Pass demo passed."
+echo "Report written to: $ROOT_DIR/.artifacts/demo-pass-report.json"

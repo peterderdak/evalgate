@@ -1,14 +1,12 @@
 # ezEval
 
-ezEval is a CLI for regression-testing structured AI features before release.
+ezEval is a lightweight CLI for one release question:
 
-It answers one question:
+**Is this AI change still safe to ship?**
 
-**Is this prompt or model change still safe to ship?**
+It runs a saved dataset against a model, validates the output against a JSON schema, computes deterministic metrics, and writes a `report.json` artifact with a pass/fail gate.
 
-ezEval runs a saved dataset against a model, validates the output against a JSON schema, computes deterministic metrics, and writes a `report.json` artifact with a pass/fail gate.
-
-## Best Fit
+## Use It For
 
 ezEval is most useful when your AI feature must return predictable JSON.
 
@@ -17,7 +15,7 @@ Good fits:
 - classification
 - structured extraction
 - tagging and routing
-- any single-turn workflow with a defined output contract
+- any single-turn workflow with a strict output contract
 
 Not a great fit:
 
@@ -30,14 +28,14 @@ Not a great fit:
 Most teams still test prompt changes manually:
 
 - they try a few examples by hand
-- they do not preserve those examples as a dataset
-- they do not have a consistent pass/fail bar
+- they do not save those examples as a dataset
+- they do not define a consistent pass/fail bar
 - release decisions become opinion-driven
 
-ezEval turns that into a repeatable release gate:
+ezEval turns that into a repeatable gate:
 
 - same dataset every run
-- same schema contract every run
+- same schema every run
 - same thresholds every run
 - same `report.json` artifact every run
 
@@ -75,7 +73,7 @@ pnpm ezeval:init
 
 This creates `ezeval.config.json` in the repo root.
 
-### 3. Run the sample use case
+### 3. Run the sample
 
 ```bash
 pnpm ezeval:sample
@@ -86,7 +84,7 @@ This uses:
 - [examples/ticket-triage/dataset.jsonl](./examples/ticket-triage/dataset.jsonl)
 - [examples/ticket-triage/config.ezeval.json](./examples/ticket-triage/config.ezeval.json)
 
-The output is written to:
+The report is written to:
 
 - [report.json](./.artifacts/report.json)
 
@@ -109,7 +107,7 @@ pnpm ezeval run \
   --fail-on-gate
 ```
 
-## Example Use Case
+## Example
 
 The repo ships with one complete example:
 
@@ -125,7 +123,7 @@ This example evaluates a support-ticket classifier that must return one category
 
 ## Demo
 
-The repo also includes a public demo flow with one passing run and one intentionally failing run.
+The repo includes a public demo flow with one passing run and one intentionally failing run.
 
 - narrative and recording guide: [docs/demo.md](./docs/demo.md)
 - passing gate config: [examples/ticket-triage/demo-pass.ezeval.json](./examples/ticket-triage/demo-pass.ezeval.json)
@@ -247,7 +245,7 @@ scripts/                 reproducible demo scripts
 
 See [.env.example](./.env.example).
 
-For real provider runs, the main variable is:
+For live provider runs, the main variable is:
 
 - `OPENAI_API_KEY`
 
@@ -258,7 +256,7 @@ docker build -t ezeval .
 docker run --rm -v "$PWD:/workspace" -w /workspace ezeval run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.ezeval.json
 ```
 
-## Validation
+## Local Checks
 
 ```bash
 pnpm test

@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 echo "Running ezEval fail demo..."
-echo "This demo is expected to fail the gate because latency_p95_max_ms is set to 1 ms."
+echo "This demo is expected to fail because latency_p95_max_ms is set to 1 ms."
 echo
 
 if pnpm ezeval run \
@@ -20,4 +20,4 @@ fi
 
 echo
 echo "Fail demo behaved as expected."
-echo "Report: $ROOT_DIR/.artifacts/demo-fail-report.json"
+echo "Report written to: $ROOT_DIR/.artifacts/demo-fail-report.json"
