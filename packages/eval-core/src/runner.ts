@@ -1,7 +1,5 @@
 import path from "node:path";
 
-import type { EvalCase, FailureRecord, RunReport } from "@evalgate/shared";
-
 import { enumAccuracy } from "./metrics/enum-accuracy.js";
 import { fieldLevelAccuracy } from "./metrics/field-level-accuracy.js";
 import { latencyP95 } from "./metrics/latency-p95.js";
@@ -10,7 +8,14 @@ import { getModelProvider } from "./providers/provider.js";
 import { compareEnum } from "./scorers/compare-enum.js";
 import { compareFields } from "./scorers/compare-fields.js";
 import { evaluateGate } from "./reporter.js";
-import type { EvaluationCaseResult, RunEvaluationInput, RunEvaluationOutput } from "./types.js";
+import type {
+  EvalCase,
+  EvaluationCaseResult,
+  FailureRecord,
+  RunEvaluationInput,
+  RunEvaluationOutput,
+  RunReport
+} from "./types.js";
 import { loadDataset } from "./validators/dataset.js";
 import { validateSchemaOutput } from "./validators/schema.js";
 
@@ -265,7 +270,7 @@ export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvalu
   const gate = evaluateGate(metrics, input.runConfig.thresholds);
   const report: RunReport = {
     run_id: input.runId,
-    project_id: input.projectId,
+    project_id: input.projectId ?? "cli_project",
     status: "completed",
     pass: gate.pass,
     summary: {
