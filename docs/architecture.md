@@ -1,15 +1,23 @@
 # EvalGate Architecture
 
-EvalGate is structured as a Supabase-first monorepo with a web app, worker, shared evaluation engine, and GitHub Action package:
+EvalGate is structured as a CLI-first monorepo with an optional hosted layer:
 
-- `apps/web`: Next.js 14 application and Node.js API routes.
-- `apps/worker`: DB-backed polling worker for queued evaluation jobs.
-- `packages/eval-core`: dataset parsing, structured model execution, metrics, and report generation.
+- `packages/eval-core`: the core product. It owns dataset parsing, structured model execution, metrics, report generation, and the `evalgate` CLI.
+- `packages/github-action`: TypeScript GitHub Action for CI gating.
 - `packages/shared`: shared domain and API types.
 - `packages/db`: SQL schema and migrations.
-- `packages/github-action`: TypeScript GitHub Action that triggers CI runs and polls for a gate result.
+- `apps/web`: optional Next.js application and API routes for teams that want a browser-based control plane.
+- `apps/worker`: optional DB-backed polling worker for hosted queued evaluation jobs.
 
-## Data flow
+## CLI-first flow
+
+1. A user creates an EvalGate config with prompt, schema, model, and thresholds.
+2. The CLI loads a JSONL dataset from disk.
+3. `packages/eval-core` calls the selected provider and validates structured output.
+4. EvalGate computes deterministic metrics and writes `report.json`.
+5. CI can consume that report directly or use the GitHub Action wrapper.
+
+## Optional hosted flow
 
 1. A project is created through the web API.
 2. A JSONL dataset is validated and uploaded to Supabase Storage, or the local `.data/` fallback when Supabase is not configured.
@@ -21,4 +29,4 @@ EvalGate is structured as a Supabase-first monorepo with a web app, worker, shar
 
 ## Local fallback
 
-If `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are not set, the repository uses `.data/` for metadata and file storage. This fallback exists for development only; the intended production path is Supabase Postgres plus Supabase Storage.
+If hosted-mode environment variables are not set, the repository uses `.data/` for metadata and file storage. This fallback exists for development only; the intended hosted production path is Supabase Postgres plus Supabase Storage.
