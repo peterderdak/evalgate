@@ -126,6 +126,7 @@ This example evaluates a support-ticket classifier that must return one category
 The repo includes a public demo flow with one passing run and one intentionally failing run.
 
 - narrative and recording guide: [docs/demo.md](./docs/demo.md)
+- launch copy for repo metadata and sharing: [docs/launch-copy.md](./docs/launch-copy.md)
 - passing gate config: [examples/ticket-triage/demo-pass.ezeval.json](./examples/ticket-triage/demo-pass.ezeval.json)
 - failing gate config: [examples/ticket-triage/demo-fail.ezeval.json](./examples/ticket-triage/demo-fail.ezeval.json)
 
