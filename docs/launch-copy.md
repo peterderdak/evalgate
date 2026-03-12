@@ -4,19 +4,23 @@ Use this file when you update the GitHub repo metadata, record the demo, or shar
 
 ## GitHub Repo Description
 
-Lightweight CLI for gating structured AI changes before release.
+CLI release gate for structured AI changes.
+
+## GitHub About Text
+
+Regression-test prompt and model changes against a saved dataset, schema, and release thresholds.
 
 ## Short Tagline
 
-Ship prompt and model changes with a repeatable pass/fail gate.
+Ship prompt and model changes with a repeatable release gate.
 
 ## One-Paragraph Product Blurb
 
-EvalGate is a lightweight CLI for teams shipping structured AI features like classification, extraction, routing, and tagging. Instead of testing prompt or model changes by hand, you run a saved JSONL dataset against a schema and release thresholds, then get a `report.json` with deterministic metrics and a clear pass/fail result. It gives PMs and engineers one repeatable way to decide whether an AI change is still safe to ship.
+EvalGate is a lightweight CLI for teams shipping structured AI features like classification, extraction, routing, and tagging. Instead of testing prompt or model changes by hand, you run a saved JSONL dataset against a schema and release thresholds, then get a `report.json` with deterministic metrics and a clear pass/fail result. It gives PMs and engineers one repeatable way to decide whether an AI change is still safe to ship before release.
 
 ## Demo Intro
 
-Today I’m showing EvalGate, a lightweight CLI for regression-testing structured AI changes before release. The workflow is simple: save a dataset, define the schema and thresholds, run one command, and get a pass/fail release decision. I’ll show one passing run and one failing run so you can see how it helps a team catch risky prompt or model changes before they ship.
+Today I’m showing EvalGate, a CLI release gate for structured AI changes. The workflow is simple: save a dataset, define the schema and thresholds, run one command, and get a pass/fail release decision. I’ll show one passing run and one failing run so you can see how it helps a team catch risky prompt or model changes before they ship.
 
 ## Demo Closing
 
@@ -24,7 +28,7 @@ That’s the core value of EvalGate: one saved dataset, one contract, one repeat
 
 ## Short Share Post
 
-Built `EvalGate`: a lightweight CLI for regression-testing structured AI changes before release.
+Built `EvalGate`: a CLI release gate for structured AI changes.
 
 You give it:
 

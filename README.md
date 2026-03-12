@@ -1,12 +1,14 @@
 # EvalGate
 
-EvalGate is a lightweight CLI for one release question:
+EvalGate is a CLI release gate for structured AI changes.
 
-**Is this AI change still safe to ship?**
+It answers one question:
+
+**Is this prompt or model change still safe to ship?**
 
 It runs a saved dataset against a model, validates the output against a JSON schema, computes deterministic metrics, and writes a `report.json` artifact with a pass/fail gate.
 
-## Use It For
+## Best Fit
 
 EvalGate is most useful when your AI feature must return predictable JSON.
 
@@ -32,7 +34,7 @@ Most teams still test prompt changes manually:
 - they do not define a consistent pass/fail bar
 - release decisions become opinion-driven
 
-EvalGate turns that into a repeatable gate:
+EvalGate turns that into a repeatable release gate:
 
 - same dataset every run
 - same schema every run

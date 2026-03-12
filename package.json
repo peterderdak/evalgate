@@ -1,7 +1,7 @@
 {
   "name": "evalgate",
   "version": "0.1.0",
-  "description": "Lightweight CLI for gating structured AI changes before release",
+  "description": "CLI release gate for structured AI changes",
   "private": true,
   "packageManager": "pnpm@10.6.3",
   "type": "module",

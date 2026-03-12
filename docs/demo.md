@@ -54,7 +54,7 @@ pnpm demo:pass
 
 What to say:
 
-"This is the healthy case. The outputs validate, the labels are correct, and the gate passes."
+"This is the healthy case. The outputs validate, the labels are correct, and the release gate passes."
 
 ### 4. Show the passing report
 
@@ -84,7 +84,7 @@ pnpm demo:fail
 
 What to say:
 
-"This run still executes, but the gate fails and CI would stop the release."
+"This run still executes, but the release gate fails and CI would stop the release."
 
 ### 7. Show the failing report
 
@@ -109,4 +109,4 @@ Point out:
 - keep the terminal zoomed in
 - run the pass demo first
 - spend more time on the release decision than on implementation details
-- position EvalGate as a lightweight release gate, not a full AI eval platform
+- position EvalGate as a CLI release gate, not a full AI eval platform
