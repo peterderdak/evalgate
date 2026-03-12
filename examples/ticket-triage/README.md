@@ -1,6 +1,6 @@
 # Ticket Triage Example
 
-This is the sample ezEval use case included in the repo.
+This is the sample EvalGate use case included in the repo.
 
 It models a support-ticket classifier that must return exactly one label:
 
@@ -13,14 +13,14 @@ It models a support-ticket classifier that must return exactly one label:
 Files:
 
 - [dataset.jsonl](./examples/ticket-triage/dataset.jsonl): sample evaluation dataset
-- [config.ezeval.json](./examples/ticket-triage/config.ezeval.json): default run config
-- [demo-pass.ezeval.json](./examples/ticket-triage/demo-pass.ezeval.json): passing demo gate
-- [demo-fail.ezeval.json](./examples/ticket-triage/demo-fail.ezeval.json): intentionally failing gate
+- [config.evalgate.json](./examples/ticket-triage/config.evalgate.json): default run config
+- [demo-pass.evalgate.json](./examples/ticket-triage/demo-pass.evalgate.json): passing demo gate
+- [demo-fail.evalgate.json](./examples/ticket-triage/demo-fail.evalgate.json): intentionally failing gate
 
 Run the standard sample:
 
 ```bash
-pnpm ezeval:sample
+pnpm evalgate:sample
 ```
 
 Run the passing demo:

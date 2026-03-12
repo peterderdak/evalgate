@@ -4,13 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "Running ezEval fail demo..."
+echo "Running EvalGate fail demo..."
 echo "This demo is expected to fail because latency_p95_max_ms is set to 1 ms."
 echo
 
-if pnpm ezeval run \
+if pnpm evalgate run \
   --dataset ./examples/ticket-triage/dataset.jsonl \
-  --config ./examples/ticket-triage/demo-fail.ezeval.json \
+  --config ./examples/ticket-triage/demo-fail.evalgate.json \
   --out ./.artifacts/demo-fail-report.json \
   --fail-on-gate; then
   echo

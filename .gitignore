@@ -7,7 +7,7 @@
 .turbo
 coverage
 dist
-ezeval.config.json
+evalgate.config.json
 node_modules
 npm-debug.log*
 *.log

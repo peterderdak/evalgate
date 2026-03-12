@@ -4,11 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "Running ezEval pass demo..."
+echo "Running EvalGate pass demo..."
 
-pnpm ezeval run \
+pnpm evalgate run \
   --dataset ./examples/ticket-triage/dataset.jsonl \
-  --config ./examples/ticket-triage/demo-pass.ezeval.json \
+  --config ./examples/ticket-triage/demo-pass.evalgate.json \
   --out ./.artifacts/demo-pass-report.json \
   --fail-on-gate
 

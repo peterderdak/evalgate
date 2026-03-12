@@ -28,4 +28,4 @@ jobs:
       - name: Build CLI
         run: pnpm build
       - name: Run sample evaluation
-        run: pnpm ezeval:sample
+        run: pnpm evalgate:sample

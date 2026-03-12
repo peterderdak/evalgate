@@ -1,5 +1,5 @@
 {
-  "name": "ezeval",
+  "name": "evalgate",
   "version": "0.1.0",
   "description": "Lightweight CLI for gating structured AI changes before release",
   "private": true,
@@ -14,7 +14,7 @@
     }
   },
   "bin": {
-    "ezeval": "./dist/bin/ezeval.js"
+    "evalgate": "./dist/bin/evalgate.js"
   },
   "engines": {
     "node": ">=20"
@@ -22,10 +22,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "ezeval": "node --import tsx ./bin/ezeval.ts",
-    "ezeval:init": "node --import tsx ./bin/ezeval.ts init --template ticket-triage --out ./ezeval.config.json",
-    "ezeval:sample": "node --import tsx ./bin/ezeval.ts run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.ezeval.json --out ./.artifacts/report.json",
-    "ezeval:sample:openai": "node --import tsx ./bin/ezeval.ts run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.ezeval.json --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ./.artifacts/report.json --fail-on-gate",
+    "evalgate": "node --import tsx ./bin/evalgate.ts",
+    "evalgate:init": "node --import tsx ./bin/evalgate.ts init --template ticket-triage --out ./evalgate.config.json",
+    "evalgate:sample": "node --import tsx ./bin/evalgate.ts run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.evalgate.json --out ./.artifacts/report.json",
+    "evalgate:sample:openai": "node --import tsx ./bin/evalgate.ts run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.evalgate.json --provider openai --model gpt-4.1-mini --api-key \"$OPENAI_API_KEY\" --out ./.artifacts/report.json --fail-on-gate",
     "demo:pass": "bash ./scripts/demo-pass.sh",
     "demo:fail": "bash ./scripts/demo-fail.sh"
   },
