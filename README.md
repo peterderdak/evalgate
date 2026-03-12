@@ -109,18 +109,6 @@ That example shows:
 - the terminal output
 - the generated report artifacts
 
-## Demo
-
-Use the built-in pass/fail demo:
-
-```bash
-pnpm demo:pass
-pnpm demo:fail
-```
-
-If you want to record it, use:
-- [docs/demo.md](./docs/demo.md)
-
 ## CI
 
 GitHub Actions example:
