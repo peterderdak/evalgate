@@ -39,6 +39,20 @@ function getUserCwd() {
   return process.env.INIT_CWD ?? process.cwd();
 }
 
+function toSafeReportPath(cwd: string, targetPath: string) {
+  const relativePath = path.relative(cwd, targetPath);
+
+  if (relativePath.length === 0) {
+    return path.basename(targetPath);
+  }
+
+  if (!relativePath.startsWith("..") && !path.isAbsolute(relativePath)) {
+    return relativePath;
+  }
+
+  return path.basename(targetPath);
+}
+
 function parseOutputFormats(value: string | undefined): OptionalArtifactFormat[] {
   if (!value) {
     return ["summary", "junit"];
@@ -225,7 +239,7 @@ async function main() {
       reportContext: {
         schemaVersion: RUN_REPORT_SCHEMA_VERSION,
         toolVersion,
-        datasetPath: resolvedDataset,
+        datasetPath: toSafeReportPath(userCwd, resolvedDataset),
         datasetSha256,
         configSha256,
         gitSha,

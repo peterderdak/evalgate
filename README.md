@@ -127,6 +127,8 @@ pnpm evalgate:sample:openai
 
 See [`.env.example`](./.env.example) for environment variables.
 
+Do not commit generated reports built from sensitive datasets. `report.json`, `summary.md`, and other artifacts can include raw inputs, outputs, and diffs.
+
 ## License
 
 MIT. See [LICENSE](./LICENSE).

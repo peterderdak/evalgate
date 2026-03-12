@@ -66,7 +66,7 @@ describe("runEvaluation", () => {
       reportContext: {
         schemaVersion: RUN_REPORT_SCHEMA_VERSION,
         toolVersion: "0.1.0",
-        datasetPath: "/tmp/support-tickets.jsonl",
+        datasetPath: "examples/ticket-triage/dataset.jsonl",
         datasetSha256: "dataset-sha",
         configSha256: "config-sha",
         gitSha: "abc123",
@@ -82,7 +82,7 @@ describe("runEvaluation", () => {
     expect(result.report.provider).toBe("mock");
     expect(result.report.model).toBe("mock-classifier");
     expect(result.report.prompt_version).toBeNull();
-    expect(result.report.dataset_path).toBe("/tmp/support-tickets.jsonl");
+    expect(result.report.dataset_path).toBe("examples/ticket-triage/dataset.jsonl");
     expect(result.report.dataset_sha256).toBe("dataset-sha");
     expect(result.report.config_sha256).toBe("config-sha");
     expect(result.report.git_sha).toBe("abc123");
