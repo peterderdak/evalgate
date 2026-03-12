@@ -39,7 +39,7 @@ EvalGate turns that into a repeatable release gate:
 - same dataset every run
 - same schema every run
 - same thresholds every run
-- same `report.json` artifact every run
+- same artifact bundle every run
 
 ## Metrics
 
@@ -56,8 +56,9 @@ EvalGate currently computes:
 2. Define the prompt, provider, schema, and thresholds in an EvalGate config.
 3. Run `evalgate run`.
 4. Review `report.json`.
-5. Optionally compare against a saved baseline.
-6. Use `--fail-on-gate` or `--fail-on-regression` in CI to block risky changes.
+5. Review the markdown or JUnit summary artifacts.
+6. Optionally compare against a saved baseline.
+7. Use `--fail-on-gate` or `--fail-on-regression` in CI to block risky changes.
 
 ## Quickstart
 
@@ -87,9 +88,18 @@ This uses:
 - [examples/ticket-triage/dataset.jsonl](./examples/ticket-triage/dataset.jsonl)
 - [examples/ticket-triage/config.evalgate.json](./examples/ticket-triage/config.evalgate.json)
 
-The report is written to:
+The artifact bundle is written to:
 
 - [report.json](./.artifacts/report.json)
+- [summary.md](./.artifacts/summary.md)
+- [junit.xml](./.artifacts/junit.xml)
+
+By default, EvalGate always writes `report.json` and also writes:
+
+- `summary.md`
+- `junit.xml`
+
+You can optionally add `sarif.json` with `--formats summary,junit,sarif`.
 
 The report now includes run metadata such as:
 
@@ -147,6 +157,16 @@ pnpm evalgate run \
   --config ./examples/ticket-triage/config.evalgate.json \
   --baseline ./baseline.json \
   --fail-on-regression
+```
+
+### 8. Choose an output directory and extra formats
+
+```bash
+pnpm evalgate run \
+  --dataset ./examples/ticket-triage/dataset.jsonl \
+  --config ./examples/ticket-triage/config.evalgate.json \
+  --output-dir ./artifacts/evalgate \
+  --formats summary,junit,sarif
 ```
 
 ## Example
@@ -264,6 +284,29 @@ Example:
 }
 ```
 
+## Output Artifacts
+
+EvalGate always writes:
+
+- `report.json`
+
+By default it also writes:
+
+- `summary.md`
+- `junit.xml`
+
+Optional artifacts:
+
+- `sarif.json` via `--formats summary,junit,sarif`
+
+Useful flags:
+
+- `--output-dir ./artifacts/evalgate`
+- `--formats summary,junit`
+- `--formats summary,junit,sarif`
+- `--formats none`
+- `--out ./artifacts/custom-report.json`
+
 ## CLI Commands
 
 Create a starter config:
@@ -294,6 +337,24 @@ pnpm evalgate run \
   --dataset ./my-dataset.jsonl \
   --config ./evalgate.config.json \
   --out ./reports/report.json
+```
+
+Write artifacts to a dedicated output directory:
+
+```bash
+pnpm evalgate run \
+  --dataset ./my-dataset.jsonl \
+  --config ./evalgate.config.json \
+  --output-dir ./reports/evalgate
+```
+
+Select extra output formats:
+
+```bash
+pnpm evalgate run \
+  --dataset ./my-dataset.jsonl \
+  --config ./evalgate.config.json \
+  --formats summary,junit,sarif
 ```
 
 Override provider or model:

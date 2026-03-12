@@ -13,11 +13,13 @@ import {
   loadBaseline,
   loadCliConfig,
   loadRunReport,
+  OPTIONAL_ARTIFACT_FORMATS,
+  type OptionalArtifactFormat,
   requiresProviderApiKey,
   RUN_REPORT_SCHEMA_VERSION,
   runEvaluation,
   writeBaselineJson,
-  writeReportJson
+  writeRunArtifacts
 } from "../src/index.js";
 
 function getArg(flag: string) {
@@ -35,6 +37,32 @@ function resolveFromUserCwd(targetPath: string) {
 
 function getUserCwd() {
   return process.env.INIT_CWD ?? process.cwd();
+}
+
+function parseOutputFormats(value: string | undefined): OptionalArtifactFormat[] {
+  if (!value) {
+    return ["summary", "junit"];
+  }
+
+  if (value.trim().toLowerCase() === "none") {
+    return [];
+  }
+
+  const formats = value
+    .split(",")
+    .map((format) => format.trim().toLowerCase())
+    .filter((format): format is OptionalArtifactFormat => format.length > 0);
+
+  const invalidFormats = formats.filter(
+    (format) => !OPTIONAL_ARTIFACT_FORMATS.includes(format as OptionalArtifactFormat)
+  );
+  if (invalidFormats.length > 0) {
+    throw new Error(
+      `Invalid --formats value: ${invalidFormats.join(", ")}. Allowed values: ${OPTIONAL_ARTIFACT_FORMATS.join(", ")}`
+    );
+  }
+
+  return [...new Set(formats)] as OptionalArtifactFormat[];
 }
 
 async function sha256File(filePath: string) {
@@ -91,7 +119,7 @@ function usageText() {
   return [
     "Usage:",
     "  evalgate init --template ticket-triage --out evalgate.config.json",
-    "  evalgate run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>] [--baseline <path>] [--fail-on-gate] [--fail-on-regression]",
+    "  evalgate run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>] [--baseline <path>] [--output-dir <dir>] [--formats summary,junit,sarif] [--fail-on-gate] [--fail-on-regression]",
     "  evalgate baseline create --from <report.json> --out <baseline.json>",
     "  evalgate compare --report <report.json> --baseline <baseline.json>",
     `Available templates: ${listCliTemplates().join(", ")}`
@@ -154,8 +182,12 @@ async function main() {
   if (command === "run") {
     const dataset = getArg("--dataset");
     const configPath = getArg("--config");
-    const out = resolveFromUserCwd(getArg("--out") ?? path.join(".artifacts", "report.json"));
+    const outFlag = getArg("--out");
+    const outputDirFlag = getArg("--output-dir");
+    const reportPath = resolveFromUserCwd(outFlag ?? path.join(outputDirFlag ?? ".artifacts", "report.json"));
+    const outputDir = resolveFromUserCwd(outputDirFlag ?? path.dirname(reportPath));
     const baselinePath = getArg("--baseline");
+    const formats = parseOutputFormats(getArg("--formats"));
 
     if (!dataset || !configPath) {
       throw new Error("Missing required flags.\n\nUsage: evalgate run --dataset <path> --config <path>");
@@ -209,21 +241,36 @@ async function main() {
       }
     });
 
-    await mkdir(path.dirname(out), { recursive: true });
-    await writeReportJson(out, report.report);
+    const comparison = baselinePath
+      ? compareReportToBaseline(report.report, await loadBaseline(resolveFromUserCwd(baselinePath)))
+      : undefined;
+
+    const artifacts = await writeRunArtifacts({
+      outputDir,
+      reportPath,
+      formats,
+      report: report.report,
+      caseResults: report.caseResults,
+      comparison
+    });
     process.stdout.write(`Eval complete.\n`);
     process.stdout.write(`Pass: ${report.pass ? "yes" : "no"}\n`);
     process.stdout.write(`Schema valid rate: ${report.report.metrics.schema_valid_rate}\n`);
     process.stdout.write(`Enum accuracy: ${report.report.metrics.enum_accuracy ?? "n/a"}\n`);
     process.stdout.write(`Field accuracy: ${report.report.metrics.field_level_accuracy}\n`);
     process.stdout.write(`Latency p95 (ms): ${report.report.metrics.latency_p95_ms}\n`);
-    process.stdout.write(`Report: ${out}\n`);
+    process.stdout.write(`Report: ${artifacts.reportJson}\n`);
+    if (artifacts.summaryMd) {
+      process.stdout.write(`Summary: ${artifacts.summaryMd}\n`);
+    }
+    if (artifacts.junitXml) {
+      process.stdout.write(`JUnit: ${artifacts.junitXml}\n`);
+    }
+    if (artifacts.sarifJson) {
+      process.stdout.write(`SARIF: ${artifacts.sarifJson}\n`);
+    }
 
-    if (baselinePath) {
-      const comparison = compareReportToBaseline(
-        report.report,
-        await loadBaseline(resolveFromUserCwd(baselinePath))
-      );
+    if (comparison) {
       process.stdout.write(`\n${formatBaselineComparison(comparison)}\n`);
 
       if (failOnRegression && comparison.hasRegression) {

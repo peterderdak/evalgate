@@ -53,6 +53,9 @@ export type GateResult = {
   reasons: GateReason[];
 };
 
+export const OPTIONAL_ARTIFACT_FORMATS = ["summary", "junit", "sarif"] as const;
+export type OptionalArtifactFormat = (typeof OPTIONAL_ARTIFACT_FORMATS)[number];
+
 export type RunReport = {
   run_id: string;
   project_id: string;
@@ -208,6 +211,13 @@ export type RunEvaluationOutput = {
   gate: GateResult;
   caseResults: EvaluationCaseResult[];
   reportPath: string;
+};
+
+export type RunArtifactSet = {
+  reportJson: string;
+  summaryMd?: string;
+  junitXml?: string;
+  sarifJson?: string;
 };
 
 export type ModelInvokeParams = {
