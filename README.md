@@ -188,6 +188,7 @@ This example evaluates a support-ticket classifier that must return one category
 The repo includes a public demo flow with one passing run and one intentionally failing run.
 
 - narrative and recording guide: [docs/demo.md](./docs/demo.md)
+- full walkthrough with files, commands, and outputs: [docs/walkthrough.md](./docs/walkthrough.md)
 - launch copy for repo metadata and sharing: [docs/launch-copy.md](./docs/launch-copy.md)
 - passing gate config: [examples/ticket-triage/demo-pass.evalgate.json](./examples/ticket-triage/demo-pass.evalgate.json)
 - failing gate config: [examples/ticket-triage/demo-fail.evalgate.json](./examples/ticket-triage/demo-fail.evalgate.json)
