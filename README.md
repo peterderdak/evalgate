@@ -90,6 +90,23 @@ The report is written to:
 
 - [report.json](./.artifacts/report.json)
 
+The report now includes run metadata such as:
+
+- `schema_version`
+- `tool_version`
+- `provider`
+- `model`
+- `prompt_version`
+- `dataset_path`
+- `dataset_sha256`
+- `config_sha256`
+- `git_sha`
+- `git_branch`
+- `started_at`
+- `finished_at`
+- `duration_ms`
+- `failure_counts_by_type`
+
 ### 4. Run against OpenAI
 
 ```bash
@@ -190,6 +207,36 @@ Example:
     "enum_accuracy_min": 0.9,
     "field_level_accuracy_min": 0.9,
     "latency_p95_max_ms": 2500
+  }
+}
+```
+
+## Report Example
+
+```json
+{
+  "run_id": "cli_run_1710200000000",
+  "schema_version": "1.0",
+  "tool_version": "0.1.0",
+  "provider": "mock",
+  "model": "mock-classifier",
+  "prompt_version": null,
+  "dataset_path": "/absolute/path/to/dataset.jsonl",
+  "dataset_sha256": "8a7c...",
+  "config_sha256": "3d91...",
+  "git_sha": "abc123...",
+  "git_branch": "main",
+  "started_at": "2026-03-11T19:35:42.000Z",
+  "finished_at": "2026-03-11T19:35:42.041Z",
+  "duration_ms": 41,
+  "failure_counts_by_type": {
+    "schema_invalid": 0,
+    "wrong_enum": 0,
+    "field_mismatch": 0,
+    "missing_field": 0,
+    "timeout": 0,
+    "provider_error": 0,
+    "parse_error": 0
   }
 }
 ```

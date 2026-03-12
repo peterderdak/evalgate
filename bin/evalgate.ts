@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-import { mkdir, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -7,6 +9,7 @@ import {
   listCliTemplates,
   loadCliConfig,
   requiresProviderApiKey,
+  RUN_REPORT_SCHEMA_VERSION,
   runEvaluation,
   writeReportJson
 } from "../src/index.js";
@@ -22,6 +25,60 @@ function resolveFromUserCwd(targetPath: string) {
   }
 
   return path.resolve(process.env.INIT_CWD ?? process.cwd(), targetPath);
+}
+
+function getUserCwd() {
+  return process.env.INIT_CWD ?? process.cwd();
+}
+
+async function sha256File(filePath: string) {
+  const contents = await readFile(filePath);
+  return createHash("sha256").update(contents).digest("hex");
+}
+
+async function getToolVersion() {
+  const packageJsonCandidates = [
+    new URL("../package.json", import.meta.url),
+    new URL("../../package.json", import.meta.url)
+  ];
+
+  for (const packageJsonUrl of packageJsonCandidates) {
+    try {
+      const packageJson = JSON.parse(await readFile(packageJsonUrl, "utf8")) as { version?: string };
+      if (typeof packageJson.version === "string" && packageJson.version.trim().length > 0) {
+        return packageJson.version;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+function getGitMetadata(cwd: string) {
+  try {
+    const gitSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+    const gitBranch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+
+    return {
+      gitSha: gitSha.length > 0 ? gitSha : null,
+      gitBranch: gitBranch.length > 0 ? gitBranch : null
+    };
+  } catch {
+    return {
+      gitSha: null,
+      gitBranch: null
+    };
+  }
 }
 
 function usageText() {
@@ -64,12 +121,19 @@ async function main() {
     const resolvedDataset = resolveFromUserCwd(dataset);
     const resolvedConfigPath = resolveFromUserCwd(configPath);
     const config = await loadCliConfig(resolvedConfigPath);
+    const userCwd = getUserCwd();
     const provider = getArg("--provider") ?? config.modelProvider;
     const model = getArg("--model") ?? config.modelName;
     const prompt = getArg("--prompt") ?? config.promptText;
     const promptVersion = getArg("--prompt-version") ?? config.promptVersion;
     const apiKey = getArg("--api-key") ?? process.env.OPENAI_API_KEY;
     const failOnGate = process.argv.includes("--fail-on-gate");
+    const [{ gitSha, gitBranch }, datasetSha256, configSha256, toolVersion] = await Promise.all([
+      Promise.resolve(getGitMetadata(userCwd)),
+      sha256File(resolvedDataset),
+      sha256File(resolvedConfigPath),
+      getToolVersion()
+    ]);
 
     if (requiresProviderApiKey(provider) && !apiKey) {
       throw new Error(`Provider ${provider} requires --api-key or OPENAI_API_KEY`);
@@ -79,6 +143,15 @@ async function main() {
       runId: `cli_run_${Date.now()}`,
       datasetPath: resolvedDataset,
       apiKey: apiKey ?? "",
+      reportContext: {
+        schemaVersion: RUN_REPORT_SCHEMA_VERSION,
+        toolVersion,
+        datasetPath: resolvedDataset,
+        datasetSha256,
+        configSha256,
+        gitSha,
+        gitBranch
+      },
       runConfig: {
         promptText: prompt,
         promptVersion,

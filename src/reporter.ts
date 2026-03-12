@@ -1,6 +1,14 @@
 import { writeFile } from "node:fs/promises";
 
-import type { GateResult, RunReport, Thresholds } from "./types.js";
+import {
+  FAILURE_TYPES,
+  RUN_REPORT_SCHEMA_VERSION,
+  type FailureRecord,
+  type GateResult,
+  type RunEvaluationInput,
+  type RunReport,
+  type Thresholds
+} from "./types.js";
 
 export function evaluateGate(
   metrics: RunReport["metrics"],
@@ -48,6 +56,74 @@ export function evaluateGate(
   return {
     pass: reasons.every((reason) => reason.passed),
     reasons
+  };
+}
+
+function buildFailureCountsByType(failures: FailureRecord[]): Record<(typeof FAILURE_TYPES)[number], number> {
+  const counts = Object.fromEntries(FAILURE_TYPES.map((failureType) => [failureType, 0])) as Record<
+    (typeof FAILURE_TYPES)[number],
+    number
+  >;
+
+  for (const failure of failures) {
+    counts[failure.failureType] += 1;
+  }
+
+  return counts;
+}
+
+export function createRunReport(input: {
+  runId: string;
+  projectId?: string;
+  totalCases: number;
+  failures: FailureRecord[];
+  metrics: RunReport["metrics"];
+  gate: GateResult;
+  runConfig: RunEvaluationInput["runConfig"];
+  reportContext?: RunEvaluationInput["reportContext"];
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+}): RunReport {
+  const reportContext = input.reportContext ?? {};
+
+  return {
+    run_id: input.runId,
+    project_id: input.projectId ?? "cli_project",
+    status: "completed",
+    pass: input.gate.pass,
+    schema_version: reportContext.schemaVersion ?? RUN_REPORT_SCHEMA_VERSION,
+    tool_version: reportContext.toolVersion ?? null,
+    provider: input.runConfig.modelProvider,
+    model: input.runConfig.modelName,
+    prompt_version: input.runConfig.promptVersion ?? null,
+    dataset_path: reportContext.datasetPath ?? null,
+    dataset_sha256: reportContext.datasetSha256 ?? null,
+    config_sha256: reportContext.configSha256 ?? null,
+    git_sha: reportContext.gitSha ?? null,
+    git_branch: reportContext.gitBranch ?? null,
+    started_at: input.startedAt,
+    finished_at: input.finishedAt,
+    duration_ms: input.durationMs,
+    summary: {
+      total_cases: input.totalCases,
+      passed_cases: input.totalCases - input.failures.length,
+      failed_cases: input.failures.length
+    },
+    metrics: input.metrics,
+    thresholds: input.runConfig.thresholds,
+    gate_reasons: input.gate.reasons,
+    failure_counts_by_type: buildFailureCountsByType(input.failures),
+    failures: input.failures.map((failure) => ({
+      testcase_id: failure.testcaseId,
+      failure_type: failure.failureType,
+      input: failure.input,
+      expected: failure.expected,
+      actual: failure.actual,
+      diff: failure.diff,
+      latency_ms: failure.latencyMs
+    })),
+    generated_at: input.finishedAt
   };
 }
 

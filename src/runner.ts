@@ -5,6 +5,7 @@ import { fieldLevelAccuracy } from "./metrics/field-level-accuracy.js";
 import { latencyP95 } from "./metrics/latency-p95.js";
 import { schemaValidRate } from "./metrics/schema-valid-rate.js";
 import { getModelProvider } from "./providers/provider.js";
+import { createRunReport } from "./reporter.js";
 import { compareEnum } from "./scorers/compare-enum.js";
 import { compareFields } from "./scorers/compare-fields.js";
 import { evaluateGate } from "./reporter.js";
@@ -179,6 +180,7 @@ async function invokeCase(
 }
 
 export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvaluationOutput> {
+  const runStartedAtMs = Date.now();
   const dataset = input.cases ?? (input.datasetPath ? await loadDataset(input.datasetPath) : null);
   if (!dataset || dataset.length === 0) {
     throw new Error("No evaluation cases supplied");
@@ -268,30 +270,23 @@ export async function runEvaluation(input: RunEvaluationInput): Promise<RunEvalu
     latency_p95_ms: latencyP95(latencies)
   };
   const gate = evaluateGate(metrics, input.runConfig.thresholds);
-  const report: RunReport = {
-    run_id: input.runId,
-    project_id: input.projectId ?? "cli_project",
-    status: "completed",
-    pass: gate.pass,
-    summary: {
-      total_cases: dataset.length,
-      passed_cases: dataset.length - failures.length,
-      failed_cases: failures.length
-    },
+  const runFinishedAtMs = Date.now();
+  const report = createRunReport({
+    runId: input.runId,
+    projectId: input.projectId,
+    totalCases: dataset.length,
+    failures,
     metrics,
-    thresholds: input.runConfig.thresholds,
-    gate_reasons: gate.reasons,
-    failures: failures.map((failure) => ({
-      testcase_id: failure.testcaseId,
-      failure_type: failure.failureType,
-      input: failure.input,
-      expected: failure.expected,
-      actual: failure.actual,
-      diff: failure.diff,
-      latency_ms: failure.latencyMs
-    })),
-    generated_at: new Date().toISOString()
-  };
+    gate,
+    runConfig: input.runConfig,
+    reportContext: {
+      datasetPath: input.datasetPath ?? null,
+      ...input.reportContext
+    },
+    startedAt: new Date(runStartedAtMs).toISOString(),
+    finishedAt: new Date(runFinishedAtMs).toISOString(),
+    durationMs: runFinishedAtMs - runStartedAtMs
+  });
 
   return {
     metrics,

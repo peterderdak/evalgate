@@ -1,4 +1,5 @@
 export type JsonObject = Record<string, unknown>;
+export const RUN_REPORT_SCHEMA_VERSION = "1.0";
 
 export type EvalCase = {
   id: string;
@@ -14,14 +15,17 @@ export type Thresholds = {
   latency_p95_max_ms?: number;
 };
 
-export type FailureType =
-  | "schema_invalid"
-  | "wrong_enum"
-  | "field_mismatch"
-  | "missing_field"
-  | "timeout"
-  | "provider_error"
-  | "parse_error";
+export const FAILURE_TYPES = [
+  "schema_invalid",
+  "wrong_enum",
+  "field_mismatch",
+  "missing_field",
+  "timeout",
+  "provider_error",
+  "parse_error"
+] as const;
+
+export type FailureType = (typeof FAILURE_TYPES)[number];
 
 export type FailureRecord = {
   id: string;
@@ -54,6 +58,19 @@ export type RunReport = {
   project_id: string;
   status: "completed" | "failed";
   pass: boolean;
+  schema_version: string;
+  tool_version: string | null;
+  provider: string;
+  model: string;
+  prompt_version: string | null;
+  dataset_path: string | null;
+  dataset_sha256: string | null;
+  config_sha256: string | null;
+  git_sha: string | null;
+  git_branch: string | null;
+  started_at: string;
+  finished_at: string;
+  duration_ms: number;
   summary: {
     total_cases: number;
     passed_cases: number;
@@ -67,6 +84,7 @@ export type RunReport = {
   };
   thresholds: Thresholds;
   gate_reasons: GateReason[];
+  failure_counts_by_type: Record<FailureType, number>;
   failures: Array<{
     testcase_id: string;
     failure_type: FailureType;
@@ -86,6 +104,16 @@ export function requiresProviderApiKey(provider: string) {
   return provider !== "mock";
 }
 
+export type RunReportContext = {
+  schemaVersion?: string;
+  toolVersion?: string | null;
+  datasetPath?: string | null;
+  datasetSha256?: string | null;
+  configSha256?: string | null;
+  gitSha?: string | null;
+  gitBranch?: string | null;
+};
+
 export type RunEvaluationInput = {
   runId: string;
   projectId?: string;
@@ -95,6 +123,7 @@ export type RunEvaluationInput = {
   providerTimeoutMs?: number;
   providerMaxRetries?: number;
   retryOnParseFailure?: boolean;
+  reportContext?: RunReportContext;
   runConfig: {
     promptText: string;
     promptVersion?: string;
