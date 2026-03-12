@@ -26,9 +26,7 @@
     "evalgate": "node --import tsx ./bin/evalgate.ts",
     "evalgate:init": "node --import tsx ./bin/evalgate.ts init --template ticket-triage --out ./evalgate.config.json",
     "evalgate:sample": "node --import tsx ./bin/evalgate.ts run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.evalgate.json --out ./.artifacts/report.json",
-    "evalgate:sample:openai": "OPENAI_API_KEY=\"$OPENAI_API_KEY\" node --import tsx ./bin/evalgate.ts run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.evalgate.json --provider openai --model gpt-4.1-mini --out ./.artifacts/report.json --fail-on-gate",
-    "demo:pass": "bash ./scripts/demo-pass.sh",
-    "demo:fail": "bash ./scripts/demo-fail.sh"
+    "evalgate:sample:openai": "OPENAI_API_KEY=\"$OPENAI_API_KEY\" node --import tsx ./bin/evalgate.ts run --dataset ./examples/ticket-triage/dataset.jsonl --config ./examples/ticket-triage/config.evalgate.json --provider openai --model gpt-4.1-mini --out ./.artifacts/report.json --fail-on-gate"
   },
   "dependencies": {
     "ajv": "^8.17.1",

@@ -10,8 +10,6 @@ This is the clearest place where EvalGate adds value:
 Files:
 - [dataset.jsonl](./dataset.jsonl)
 - [config.evalgate.json](./config.evalgate.json)
-- [demo-pass.evalgate.json](./demo-pass.evalgate.json)
-- [demo-fail.evalgate.json](./demo-fail.evalgate.json)
 
 ## Input Files
 
@@ -120,13 +118,4 @@ JUnit: /.../.artifacts/junit.xml
   <testcase classname="EvalGate.mock" name="case_004" time="0.021"></testcase>
   <testcase classname="EvalGate" name="gate" time="0.135"></testcase>
 </testsuite>
-```
-
-## Pass / Fail Demo
-
-If you want a shorter public demo:
-
-```bash
-pnpm demo:pass
-pnpm demo:fail
 ```
