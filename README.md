@@ -112,7 +112,7 @@ That example shows:
 ## CI
 
 GitHub Actions example:
-- [docs/github-actions.yml](./docs/github-actions.yml)
+- [docs/github-actions-example.yml](./docs/github-actions-example.yml)
 
 ## Live Provider
 
