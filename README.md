@@ -268,3 +268,7 @@ pnpm evalgate:sample
 pnpm demo:pass
 pnpm demo:fail
 ```
+
+## License
+
+MIT. See [LICENSE](./LICENSE).

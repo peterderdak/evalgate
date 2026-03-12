@@ -2,6 +2,7 @@
   "name": "evalgate",
   "version": "0.1.0",
   "description": "CLI release gate for structured AI changes",
+  "license": "MIT",
   "private": true,
   "packageManager": "pnpm@10.6.3",
   "type": "module",
