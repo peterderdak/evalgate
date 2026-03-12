@@ -3,9 +3,9 @@
 Show one passing run and one failing run. That is enough.
 
 Files to open:
-- [dataset.jsonl](./examples/ticket-triage/dataset.jsonl)
-- [demo-pass.evalgate.json](./examples/ticket-triage/demo-pass.evalgate.json)
-- [demo-fail.evalgate.json](./examples/ticket-triage/demo-fail.evalgate.json)
+- [dataset.jsonl](../examples/ticket-triage/dataset.jsonl)
+- [demo-pass.evalgate.json](../examples/ticket-triage/demo-pass.evalgate.json)
+- [demo-fail.evalgate.json](../examples/ticket-triage/demo-fail.evalgate.json)
 
 Commands:
 
@@ -22,7 +22,7 @@ What to say:
 - the second run fails and would block CI
 
 What to show:
-- [demo-pass-report.json](./.artifacts/demo-pass-report.json)
-- [demo-fail-report.json](./.artifacts/demo-fail-report.json)
+- `.artifacts/demo-pass-report.json`
+- `.artifacts/demo-fail-report.json`
 
 Keep the demo focused on the release decision, not the implementation details.

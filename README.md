@@ -22,9 +22,9 @@ That sample uses:
 - [config.evalgate.json](./examples/ticket-triage/config.evalgate.json)
 
 Artifacts are written to:
-- [report.json](./.artifacts/report.json)
-- [summary.md](./.artifacts/summary.md)
-- [junit.xml](./.artifacts/junit.xml)
+- `.artifacts/report.json`
+- `.artifacts/summary.md`
+- `.artifacts/junit.xml`
 
 ## Core Commands
 
@@ -125,7 +125,7 @@ export OPENAI_API_KEY=your_key_here
 pnpm evalgate:sample:openai
 ```
 
-See [.env.example](./.env.example) for environment variables.
+See [`.env.example`](./.env.example) for environment variables.
 
 ## License
 
