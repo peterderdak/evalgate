@@ -5,12 +5,18 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
+  compareReportToBaseline,
+  createBaselineFromReport,
+  formatBaselineComparison,
   getCliTemplate,
   listCliTemplates,
+  loadBaseline,
   loadCliConfig,
+  loadRunReport,
   requiresProviderApiKey,
   RUN_REPORT_SCHEMA_VERSION,
   runEvaluation,
+  writeBaselineJson,
   writeReportJson
 } from "../src/index.js";
 
@@ -85,7 +91,9 @@ function usageText() {
   return [
     "Usage:",
     "  evalgate init --template ticket-triage --out evalgate.config.json",
-    "  evalgate run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>] [--fail-on-gate]",
+    "  evalgate run --dataset <path> --config <path> [--api-key <key>] [--provider openai|mock] [--model <name>] [--baseline <path>] [--fail-on-gate] [--fail-on-regression]",
+    "  evalgate baseline create --from <report.json> --out <baseline.json>",
+    "  evalgate compare --report <report.json> --baseline <baseline.json>",
     `Available templates: ${listCliTemplates().join(", ")}`
   ].join("\n");
 }
@@ -109,10 +117,45 @@ async function main() {
     return;
   }
 
+  if (command === "baseline" && process.argv[3] === "create") {
+    const reportPath = getArg("--from");
+    const out = resolveFromUserCwd(getArg("--out") ?? "baseline.json");
+
+    if (!reportPath) {
+      throw new Error("Missing required flags.\n\nUsage: evalgate baseline create --from <report.json> --out <baseline.json>");
+    }
+
+    const resolvedReportPath = resolveFromUserCwd(reportPath);
+    const report = await loadRunReport(resolvedReportPath);
+    const baseline = createBaselineFromReport(report);
+
+    await writeBaselineJson(out, baseline);
+    process.stdout.write(`Created baseline from ${resolvedReportPath}\n`);
+    process.stdout.write(`Baseline: ${out}\n`);
+    return;
+  }
+
+  if (command === "compare") {
+    const reportPath = getArg("--report");
+    const baselinePath = getArg("--baseline");
+
+    if (!reportPath || !baselinePath) {
+      throw new Error("Missing required flags.\n\nUsage: evalgate compare --report <report.json> --baseline <baseline.json>");
+    }
+
+    const report = await loadRunReport(resolveFromUserCwd(reportPath));
+    const baseline = await loadBaseline(resolveFromUserCwd(baselinePath));
+    const comparison = compareReportToBaseline(report, baseline);
+
+    process.stdout.write(`${formatBaselineComparison(comparison)}\n`);
+    return;
+  }
+
   if (command === "run") {
     const dataset = getArg("--dataset");
     const configPath = getArg("--config");
     const out = resolveFromUserCwd(getArg("--out") ?? path.join(".artifacts", "report.json"));
+    const baselinePath = getArg("--baseline");
 
     if (!dataset || !configPath) {
       throw new Error("Missing required flags.\n\nUsage: evalgate run --dataset <path> --config <path>");
@@ -128,6 +171,10 @@ async function main() {
     const promptVersion = getArg("--prompt-version") ?? config.promptVersion;
     const apiKey = getArg("--api-key") ?? process.env.OPENAI_API_KEY;
     const failOnGate = process.argv.includes("--fail-on-gate");
+    const failOnRegression = process.argv.includes("--fail-on-regression");
+    if (failOnRegression && !baselinePath) {
+      throw new Error("--fail-on-regression requires --baseline <path>");
+    }
     const [{ gitSha, gitBranch }, datasetSha256, configSha256, toolVersion] = await Promise.all([
       Promise.resolve(getGitMetadata(userCwd)),
       sha256File(resolvedDataset),
@@ -171,6 +218,18 @@ async function main() {
     process.stdout.write(`Field accuracy: ${report.report.metrics.field_level_accuracy}\n`);
     process.stdout.write(`Latency p95 (ms): ${report.report.metrics.latency_p95_ms}\n`);
     process.stdout.write(`Report: ${out}\n`);
+
+    if (baselinePath) {
+      const comparison = compareReportToBaseline(
+        report.report,
+        await loadBaseline(resolveFromUserCwd(baselinePath))
+      );
+      process.stdout.write(`\n${formatBaselineComparison(comparison)}\n`);
+
+      if (failOnRegression && comparison.hasRegression) {
+        process.exitCode = 1;
+      }
+    }
 
     if (failOnGate && !report.pass) {
       process.exitCode = 1;

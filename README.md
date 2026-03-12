@@ -56,7 +56,8 @@ EvalGate currently computes:
 2. Define the prompt, provider, schema, and thresholds in an EvalGate config.
 3. Run `evalgate run`.
 4. Review `report.json`.
-5. Use `--fail-on-gate` in CI to block risky changes.
+5. Optionally compare against a saved baseline.
+6. Use `--fail-on-gate` or `--fail-on-regression` in CI to block risky changes.
 
 ## Quickstart
 
@@ -124,6 +125,28 @@ pnpm evalgate run \
   --provider openai \
   --model gpt-4.1-mini \
   --fail-on-gate
+```
+
+### 6. Create a baseline and compare future runs
+
+```bash
+pnpm evalgate baseline create \
+  --from ./.artifacts/report.json \
+  --out ./baseline.json
+
+pnpm evalgate compare \
+  --report ./.artifacts/report.json \
+  --baseline ./baseline.json
+```
+
+### 7. Fail when a run regresses versus baseline
+
+```bash
+pnpm evalgate run \
+  --dataset ./examples/ticket-triage/dataset.jsonl \
+  --config ./examples/ticket-triage/config.evalgate.json \
+  --baseline ./baseline.json \
+  --fail-on-regression
 ```
 
 ## Example
@@ -255,6 +278,15 @@ Run an eval:
 pnpm evalgate run --dataset ./my-dataset.jsonl --config ./evalgate.config.json
 ```
 
+Run an eval and compare it to a saved baseline:
+
+```bash
+pnpm evalgate run \
+  --dataset ./my-dataset.jsonl \
+  --config ./evalgate.config.json \
+  --baseline ./baseline.json
+```
+
 Write the report to a custom path:
 
 ```bash
@@ -272,6 +304,18 @@ pnpm evalgate run \
   --config ./evalgate.config.json \
   --provider openai \
   --model gpt-4.1-mini
+```
+
+Create a baseline from a finished run:
+
+```bash
+pnpm evalgate baseline create --from ./reports/report.json --out ./baseline.json
+```
+
+Compare a report to a saved baseline:
+
+```bash
+pnpm evalgate compare --report ./reports/report.json --baseline ./baseline.json
 ```
 
 ## CI Example

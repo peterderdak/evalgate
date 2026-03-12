@@ -1,4 +1,5 @@
 export * from "./cli-config.js";
+export * from "./baseline.js";
 export * from "./providers/mock.js";
 export * from "./providers/openai.js";
 export * from "./providers/provider.js";

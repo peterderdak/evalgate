@@ -97,6 +97,58 @@ export type RunReport = {
   generated_at: string;
 };
 
+export const BASELINE_SCHEMA_VERSION = "1.0";
+export const COMPARABLE_METRICS = [
+  "schema_valid_rate",
+  "enum_accuracy",
+  "field_level_accuracy",
+  "latency_p95_ms"
+] as const;
+
+export type ComparableMetricName = (typeof COMPARABLE_METRICS)[number];
+export type ComparableMetricValue = RunReport["metrics"][ComparableMetricName];
+
+export type EvalBaseline = {
+  schema_version: string;
+  created_at: string;
+  source_report: {
+    run_id: string;
+    schema_version: string;
+    tool_version: string | null;
+    provider: string;
+    model: string;
+    prompt_version: string | null;
+    dataset_path: string | null;
+    dataset_sha256: string | null;
+    config_sha256: string | null;
+    git_sha: string | null;
+    git_branch: string | null;
+    generated_at: string;
+  };
+  metrics: RunReport["metrics"];
+};
+
+export type MetricTrend = "improved" | "unchanged" | "regressed" | "not_comparable";
+export type MetricDirection = "higher_is_better" | "lower_is_better";
+
+export type BaselineMetricComparison = {
+  metric: ComparableMetricName;
+  current: ComparableMetricValue;
+  baseline: ComparableMetricValue;
+  delta: number | null;
+  direction: MetricDirection;
+  trend: MetricTrend;
+};
+
+export type BaselineComparison = {
+  reportRunId: string;
+  baselineRunId: string;
+  metrics: BaselineMetricComparison[];
+  regressions: ComparableMetricName[];
+  hasRegression: boolean;
+  warnings: string[];
+};
+
 export const MAX_DATASET_CASES = 200;
 export const MODEL_PROVIDERS = ["openai", "mock"] as const;
 
