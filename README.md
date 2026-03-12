@@ -9,6 +9,9 @@ Best fit:
 - structured extraction
 - tagging and routing
 
+Most valuable use case:
+- a team has a prompt or model change for a structured AI feature and needs one repeatable command to decide whether it is still safe to ship
+
 ## Quickstart
 
 ```bash
@@ -96,8 +99,15 @@ Key report fields:
 
 ## Example
 
-The repo ships with one complete example:
+The repo ships with one complete walkthrough:
 - [examples/ticket-triage/README.md](./examples/ticket-triage/README.md)
+
+That example shows:
+- the dataset file
+- the config file
+- the exact command to run
+- the terminal output
+- the generated report artifacts
 
 ## Demo
 
